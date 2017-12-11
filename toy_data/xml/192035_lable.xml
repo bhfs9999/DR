@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotation verified="no">
+	<filename>192035_lable.JPG</filename>
+	<path>.\image5_label\192035_lable.jpg</path>
+	<size>
+		<width>1160</width>
+		<height>1017</height>
+		<depth>3</depth>
+	</size>
+	<object>
+		<name>视网膜前出血</name>
+		<bndbox>
+			<xmin>916</xmin>
+			<ymin>371</ymin>
+			<xmax>946</xmax>
+			<ymax>401</ymax>
+		</bndbox>
+	</object>
+</annotation>

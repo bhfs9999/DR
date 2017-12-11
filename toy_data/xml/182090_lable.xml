@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotation verified="no">
+	<filename>182090_lable.JPG</filename>
+	<path>.\image5_label\182090_lable.jpg</path>
+	<size>
+		<width>1160</width>
+		<height>1066</height>
+		<depth>3</depth>
+	</size>
+	<object>
+		<name>视网膜前出血</name>
+		<bndbox>
+			<xmin>431</xmin>
+			<ymin>402</ymin>
+			<xmax>456</xmax>
+			<ymax>427</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>视网膜深层出血</name>
+		<bndbox>
+			<xmin>410</xmin>
+			<ymin>553</ymin>
+			<xmax>448</xmax>
+			<ymax>583</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>视网膜深层出血</name>
+		<bndbox>
+			<xmin>774</xmin>
+			<ymin>702</ymin>
+			<xmax>801</xmax>
+			<ymax>735</ymax>
+		</bndbox>
+	</object>
+</annotation>
