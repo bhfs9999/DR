@@ -14,6 +14,8 @@ class BaseOptions(object):
 
     def initialize(self):
         self.parser.add_argument('phase', choices=['train', 'test'], help='choice train or test')
+        self.parser.add_argument('exp_name', type=str, help='experiment name')
+        self.parser.add_argument('--model_name', default='VggStride16', type=str, choices=['VggStride16'], help='model')
         self.parser.add_argument('--version', default='single_feature', help='conv11_2(v2) or pool6(v1) as last layer')
         self.parser.add_argument('--basenet', default='vgg16_reducedfc.pth', help='pretrained base model')
         self.parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')

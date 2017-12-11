@@ -4,6 +4,89 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from data.prior_box import vgg_stride16, PriorBox
 import os
+import torch.optim as optim
+from .base_model import BaseModel
+from ..layers.modules import MultiBoxLoss
+import torch.backends.cudnn as cudnn
+import torch.nn.init as init
+
+class DetModel(BaseModel):
+    def __init__(self, args,):
+        super(DetModel, self).__init__()
+        self.args       = args
+        self.model_name = args.model_name
+        self.cuda       = args.cuda
+        self.net        = eval(self.model_name+'(args)')
+        self.lr_current = self.args.lr
+        self.optimizer  = optim.SGD(self.net.parameters(), lr=args.lr,
+                                    momentum=args.momentum, weight_decay=args.weight_decay)
+        self.criterion  = MultiBoxLoss(args.num_classes, 0.5, True, 0, 3, 0.5, False, self.cuda)
+
+    def init_model(self):
+        def xavier(param):
+            init.xavier_uniform(param)
+
+        def weights_init(m):
+            if isinstance(m, nn.Conv2d):
+                xavier(m.weight.data)
+                m.bias.data.zero_()
+        self.net.apply(weights_init)
+
+        if self.args.resume:
+            print('Resuming training, loading {}...'.format(self.args.resume))
+            self.load_weights(self.net, self.args.resume)
+        else:
+            vgg_weights = torch.load(self.args.save_folder + self.args.basenet)
+            print('Loading base network...')
+            self.net.vgg.load_state_dict(vgg_weights)
+
+        if self.args.cuda:
+            self.net        = self.net.cuda()
+            cudnn.benchmark = True
+
+    def test(self, x):
+        self.net.val()
+        out = self.net(x)
+        return out
+
+    def train(self, dataloader, epoch):
+        self.net.train()
+        self._adjust_learning_rate(epoch)
+        for images, targets in dataloader:
+            if self.cuda:
+                images  = Variable(images.cuda())
+                targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
+            else:
+                images  = Variable(images)
+                targets = [Variable(anno, volatile=True) for anno in targets]
+
+            # forward
+            out = self.net(images)
+
+            #backward
+            self.optimizer.zero_grad()
+            loss_l, loss_c = self.criterion(out, targets)
+            loss = loss_c + loss_l
+            loss.backward()
+            self.optimizer.step()
+            print('===loss:{}==='.format(loss.data[0]))
+
+    def val(self, dataloader, epoch):
+        self.net.val()
+        for images, targets in dataloader:
+            if self.cuda:
+                images = Variable(images.cuda())
+                targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
+            else:
+                images = Variable(images)
+                targets = [Variable(anno, volatile=True) for anno in targets]
+
+            # forward
+            out = self.forward(images)
+            loss_l, loss_c = self.criterion(out, targets)
+            loss = loss_c + loss_l
+
+
 
 class VggStride16(nn.Module):
     def __init__(self, args):
@@ -12,12 +95,11 @@ class VggStride16(nn.Module):
         self.num_classes = args.num_classes
         self.priors      = Variable(PriorBox(vgg_stride16).forward(), volatile=True)
         self.crop_size   = args.crop_size
-
-        self.vgg = nn.ModuleList(vgg(base[self.crop_size], 3,))
+        self.vgg         = nn.ModuleList(vgg(base[self.crop_size], 3,))
         # TODO: need more general
-        self.loc_layers = nn.Conv2d(self.vgg[-2].out_channels,
+        self.loc_layers  = nn.Conv2d(self.vgg[-2].out_channels,
                                     6 * 4, kernel_size=3, padding=1)
-        self.cls_layers = nn.Conv2d(self.vgg[-2].out_channels,
+        self.cls_layers  = nn.Conv2d(self.vgg[-2].out_channels,
                                     6 * self.num_classes, kernel_size=3, padding=1)
 
     def forward(self, x):
@@ -29,6 +111,7 @@ class VggStride16(nn.Module):
         loc = self.loc_layers(x).permute(0, 2, 3, 1).contiguous()
         cls = self.cls_layers(x).permute(0, 2, 3, 1).contiguous()
 
+        # TODO: add detect
         if self.phase == 'test':
             pass
         else:
@@ -38,15 +121,6 @@ class VggStride16(nn.Module):
                 self.priors
             )
         return output
-
-    def load_weights(self, base_file):
-        other, ext = os.path.splitext(base_file)
-        if ext == '.pkl' or '.pth':
-            print('Loading weights into state dict...')
-            self.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
-            print('Finished!')
-        else:
-            print('Sorry only .pth and .pkl files supported.')
 
 def vgg(cfg, i, batch_norm=False):
     layers = []
