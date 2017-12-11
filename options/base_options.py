@@ -12,7 +12,7 @@ class BaseOptions(object):
         self.initialized = False
 
     def initialize(self):
-        self.parser.add_argument('phase', choice=['train', 'test'], help='choice train or test')
+        self.parser.add_argument('phase', choices=['train', 'test'], help='choice train or test')
         self.parser.add_argument('--version', default='single_feature', help='conv11_2(v2) or pool6(v1) as last layer')
         self.parser.add_argument('--basenet', default='vgg16_reducedfc.pth', help='pretrained base model')
         self.parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
@@ -31,7 +31,6 @@ class BaseOptions(object):
         self.parser.add_argument('--voc_root', default=VOCroot, help='Location of VOC root directory')
         self.parser.add_argument('--crop_size', default=300, type=int, help='size of cropped image')
         self.parser.add_argument('--input_size', default=300, type=int, help='model input size')
-        self.parser.add_argument('--weight_decay', default=5e-4, type=float, help='L2 norm weight')
         self.parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
         self.parser.add_argument('--send_images_to_visdom', type=str2bool, default=False,
                             help='Sample a random image from each 10th batch, send it to visdom after augmentations step')

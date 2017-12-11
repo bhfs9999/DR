@@ -76,7 +76,6 @@ class MultiBoxLoss(nn.Module):
         # wrap targets
         loc_t = Variable(loc_t, requires_grad=False)
         conf_t = Variable(conf_t, requires_grad=False)
-
         pos = conf_t > 0
         num_pos = pos.sum(keepdim=True)
 
@@ -87,6 +86,7 @@ class MultiBoxLoss(nn.Module):
         loc_t = loc_t[pos_idx].view(-1, 4)
         loss_l = F.smooth_l1_loss(loc_p, loc_t, size_average=False)
 
+#############
         # Compute max conf across batch for hard negative mining
         batch_conf = conf_data.view(-1, self.num_classes)
 
@@ -95,12 +95,13 @@ class MultiBoxLoss(nn.Module):
         # Hard Negative Mining
         loss_c[pos] = 0  # filter out pos boxes for now
         loss_c = loss_c.view(num, -1)
+        print(loss_c)
         _, loss_idx = loss_c.sort(1, descending=True)
         _, idx_rank = loss_idx.sort(1)
         num_pos = pos.long().sum(1, keepdim=True)
         num_neg = torch.clamp(self.negpos_ratio*num_pos, max=pos.size(1)-1)
         neg = idx_rank < num_neg.expand_as(idx_rank)
-
+##############
         # Confidence Loss Including Positive and Negative Examples
         pos_idx = pos.unsqueeze(2).expand_as(conf_data)
         neg_idx = neg.unsqueeze(2).expand_as(conf_data)

@@ -16,7 +16,7 @@ import time
 from options.base_options import BaseOptions
 
 options = BaseOptions()
-args = options.parser()
+args = options.parse()
 options.setup_option()
 
 vgg16_s16_net = VggStride16(args)
@@ -100,9 +100,9 @@ def train():
             )
         )
     batch_iterator = None
-    data_loader = data.DataLoader(dataset, batch_size, num_workers=args.num_workers,
+    data_loader = data.DataLoader(dataset, args.batch_size, num_workers=args.num_workers,
                                   shuffle=True, collate_fn=detection_collate, pin_memory=True)
-    for iteration in range(args.start_iter, max_iter):
+    for iteration in range(args.start_iter, args.iterations):
         if (not batch_iterator) or (iteration % epoch_size == 0):
             # create batch iterator
             batch_iterator = iter(data_loader)
@@ -124,7 +124,6 @@ def train():
 
         # load train data
         images, targets = next(batch_iterator)
-
         if args.cuda:
             images = Variable(images.cuda())
             targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
