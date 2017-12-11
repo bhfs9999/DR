@@ -1,4 +1,10 @@
 import argparse
+import torch
+import os
+from data import VOCroot
+
+def str2bool(v):
+    return v.lower() in ("yes", "true", "t", "1")
 
 class BaseOptions(object):
     def __init__(self):
@@ -6,6 +12,7 @@ class BaseOptions(object):
         self.initialized = False
 
     def initialize(self):
+        self.parser.add_argument('phase', choice=['train', 'test'], help='choice train or test')
         self.parser.add_argument('--version', default='single_feature', help='conv11_2(v2) or pool6(v1) as last layer')
         self.parser.add_argument('--basenet', default='vgg16_reducedfc.pth', help='pretrained base model')
         self.parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
@@ -20,11 +27,39 @@ class BaseOptions(object):
         self.parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
         self.parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
         self.parser.add_argument('--log_iters', default=True, type=bool, help='Print the loss at each iteration')
-        self.parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
-        self.parser.add_argument('--send_images_to_visdom', type=str2bool, default=False, help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
         self.parser.add_argument('--save_folder', default='weights/', help='Location to save checkpoint models')
         self.parser.add_argument('--voc_root', default=VOCroot, help='Location of VOC root directory')
-        self.parser.add_argument('--crop_size', default=300, help='size of cropped image')
+        self.parser.add_argument('--crop_size', default=300, type=int, help='size of cropped image')
+        self.parser.add_argument('--input_size', default=300, type=int, help='model input size')
+        self.parser.add_argument('--weight_decay', default=5e-4, type=float, help='L2 norm weight')
+        self.parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
+        self.parser.add_argument('--send_images_to_visdom', type=str2bool, default=False,
+                            help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
+        self.parser.add_argument('--stepvalues', default=[400, 800, 1200], type=list, help='# of iter to change lr')
+
+        # fixed args
+        self.parser.add_argument('--means', type=list, default=(104, 117, 123), help='mean of now')
+        self.parser.add_argument('--num_classes', default=2+1, type=int, help='# lesion + bg' )
 
     def parse(self):
-        if not self.
+        if not self.initialized:
+            self.initialize()
+        self.opt = self.parser.parse_args()
+
+        args = vars(self.opt)
+        print('--------------Options-------------')
+        for k, v in sorted(args.items()):
+            print('%s: %s' % (str(k), str(v)))
+        print('----------------End---------------')
+        return self.opt
+
+    def setup_option(self):
+        if self.opt.cuda and torch.cuda.is_available():
+            torch.set_default_tensor_type('torch.cuda.FloatTensor')
+        else:
+            torch.set_default_tensor_type('torch.FloatTensor')
+
+        # cfg = (v1, v2)[args.version == 'v2']
+
+        if not os.path.exists(self.opt.save_folder):
+            os.mkdir(self.opt.save_folder)

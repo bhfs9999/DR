@@ -6,10 +6,10 @@ from data.prior_box import vgg_stride16, PriorBox
 import os
 
 class VggStride16(nn.Module):
-    def __init__(self, phase, num_classes, args):
+    def __init__(self, phase, args):
         super(VggStride16, self).__init__()
         self.phase       = phase
-        self.num_classes = num_classes
+        self.num_classes = args.num_classes
         self.priors      = Variable(PriorBox(vgg_stride16).forward(), volatile=True)
         self.crop_size   = args.crop_size
 
