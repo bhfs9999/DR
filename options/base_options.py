@@ -2,6 +2,7 @@ import argparse
 import torch
 import os
 from data import VOCroot
+import torch.backends.cudnn as cudnn
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -34,11 +35,11 @@ class BaseOptions(object):
         self.parser.add_argument('--visdom', default=False, type=str2bool, help='Use visdom to for loss visualization')
         self.parser.add_argument('--send_images_to_visdom', type=str2bool, default=False,
                             help='Sample a random image from each 10th batch, send it to visdom after augmentations step')
-        self.parser.add_argument('--stepvalues', default=[400, 800, 1200], type=list, help='# of iter to change lr')
+        self.parser.add_argument('--stepvalues', default=[80000, 100000, 120000], type=list, help='# of iter to change lr')
 
         # fixed args
         self.parser.add_argument('--means', type=list, default=(104, 117, 123), help='mean of now')
-        self.parser.add_argument('--num_classes', default=2+1, type=int, help='# lesion + bg' )
+        self.parser.add_argument('--num_classes', default=21, type=int, help='# lesion + bg' )
 
     def parse(self):
         if not self.initialized:
@@ -55,9 +56,9 @@ class BaseOptions(object):
     def setup_option(self):
         if self.opt.cuda and torch.cuda.is_available():
             torch.set_default_tensor_type('torch.cuda.FloatTensor')
+            cudnn = True
         else:
             torch.set_default_tensor_type('torch.FloatTensor')
-
         # cfg = (v1, v2)[args.version == 'v2']
 
         if not os.path.exists(self.opt.save_folder):

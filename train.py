@@ -22,17 +22,14 @@ options.setup_option()
 vgg16_s16_net = VggStride16(args)
 net = vgg16_s16_net
 train_sets = [('2007', 'trainval')]
-# if args.cuda:
-#     net = torch.nn.DataParallel(ssd_net)
-#     cudnn.benchmark = True
 
-# if args.resume:
-#     print('Resuming training, loading {}...'.format(args.resume))
-#     vgg16_s16_net.load_weights(args.resume)
-# else:
-#     vgg_weights = torch.load(args.save_folder + args.basenet)
-#     print('Loading base network...')
-#     vgg16_s16_net.load_state_dict(vgg_weights)
+if args.resume:
+    print('Resuming training, loading {}...'.format(args.resume))
+    vgg16_s16_net.load_weights(args.resume)
+else:
+    vgg_weights = torch.load(args.save_folder + args.basenet)
+    print('Loading base network...')
+    vgg16_s16_net.vgg.load_state_dict(vgg_weights)
 
 if args.cuda:
     net = net.cuda()
@@ -44,24 +41,20 @@ if args.visdom:
 def xavier(param):
     init.xavier_uniform(param)
 
-
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
         xavier(m.weight.data)
         m.bias.data.zero_()
 
-
 if not args.resume:
     print('Initializing weights...')
     # initialize newly added layers' weights with xavier method
-    vgg16_s16_net.vgg.apply(weights_init)
     vgg16_s16_net.loc_layers.apply(weights_init)
     vgg16_s16_net.cls_layers.apply(weights_init)
 
 optimizer = optim.SGD(net.parameters(), lr=args.lr,
                       momentum=args.momentum, weight_decay=args.weight_decay)
 criterion = MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, args.cuda)
-
 
 def train():
     net.train()
@@ -85,7 +78,7 @@ def train():
             opts=dict(
                 xlabel='Iteration',
                 ylabel='Loss',
-                title='Current SSD Training Loss',
+                title='Current Single_feature Training Loss',
                 legend=['Loc Loss', 'Conf Loss', 'Loss']
             )
         )
@@ -95,7 +88,7 @@ def train():
             opts=dict(
                 xlabel='Epoch',
                 ylabel='Loss',
-                title='Epoch SSD Training Loss',
+                title='Epoch Single_feature Training Loss',
                 legend=['Loc Loss', 'Conf Loss', 'Loss']
             )
         )
