@@ -26,5 +26,3 @@ class BaseOptions(object):
         self.parser.add_argument('--voc_root', default=VOCroot, help='Location of VOC root directory')
         self.parser.add_argument('--crop_size', default=300, help='size of cropped image')
 
-    def parse(self):
-        if not self.
