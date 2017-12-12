@@ -2,7 +2,7 @@ import torch
 import os
 
 class BaseModel(object):
-    def __init__(self, args):
+    def __init__(self,):
         pass
 
     def init_model(self):
@@ -33,7 +33,7 @@ class BaseModel(object):
         # Adapted from PyTorch Imagenet example:
         # https://github.com/pytorch/examples/blob/master/imagenet/main.py
         """
-        if epoch in self.args.stepvalue:
+        if epoch in self.args.stepvalues:
             self.lr_current = self.lr_current * self.args.gamma
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.lr_current

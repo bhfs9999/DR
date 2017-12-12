@@ -6,21 +6,23 @@ from data.prior_box import vgg_stride16, PriorBox
 import os
 import torch.optim as optim
 from .base_model import BaseModel
-from ..layers.modules import MultiBoxLoss
+from layers.modules import MultiBoxLoss
 import torch.backends.cudnn as cudnn
 import torch.nn.init as init
+from layers.functions import Detect
 
 class DetModel(BaseModel):
     def __init__(self, args,):
         super(DetModel, self).__init__()
         self.args       = args
+        self.phase      = args.phase
         self.model_name = args.model_name
         self.cuda       = args.cuda
         self.net        = eval(self.model_name+'(args)')
         self.lr_current = self.args.lr
         self.optimizer  = optim.SGD(self.net.parameters(), lr=args.lr,
                                     momentum=args.momentum, weight_decay=args.weight_decay)
-        self.criterion  = MultiBoxLoss(args.num_classes, 0.5, True, 0, 3, 0.5, False, self.cuda)
+        self.criterion  = MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda)
 
     def init_model(self):
         def xavier(param):
@@ -45,8 +47,9 @@ class DetModel(BaseModel):
             cudnn.benchmark = True
 
     def test(self, x):
+        assert self.phase == 'test', "Command arg phase should be 'test'. "
         self.net.val()
-        out = self.net(x)
+        out = self.net(x, self.args)
         return out
 
     def train(self, dataloader, epoch):
@@ -82,7 +85,7 @@ class DetModel(BaseModel):
                 targets = [Variable(anno, volatile=True) for anno in targets]
 
             # forward
-            out = self.forward(images)
+            out = self.net(images)
             loss_l, loss_c = self.criterion(out, targets)
             loss = loss_c + loss_l
 
@@ -101,6 +104,9 @@ class VggStride16(nn.Module):
                                     6 * 4, kernel_size=3, padding=1)
         self.cls_layers  = nn.Conv2d(self.vgg[-2].out_channels,
                                     6 * self.num_classes, kernel_size=3, padding=1)
+        if self.phase == 'test':
+            self.softmax = nn.Softmax()
+            self.detect  = Detect(self.num_classes, 0, 200, 0.01, 0.45)
 
     def forward(self, x):
         for one_layer in self.vgg:
@@ -111,9 +117,12 @@ class VggStride16(nn.Module):
         loc = self.loc_layers(x).permute(0, 2, 3, 1).contiguous()
         cls = self.cls_layers(x).permute(0, 2, 3, 1).contiguous()
 
-        # TODO: add detect
         if self.phase == 'test':
-            pass
+            output = self.detect(
+                loc.view(loc.size(0), -1, 4),
+                self.softmax(cls.view(-1, self.num_classes)),
+                self.priors.type(type(x.data))
+            )
         else:
             output = (
                 loc.view(loc.size(0), -1, 4),

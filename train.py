@@ -10,51 +10,51 @@ from data import v2, v1, AnnotationTransform, VOCDetection, detection_collate, V
 from utils.augmentations import SSDAugmentation
 from layers.modules import MultiBoxLoss
 # from ssd import build_ssd
-from model.det_model import VggStride16
+from model.det_model import DetModel
 import numpy as np
 import time
 from options.base_options import BaseOptions
 
-options = BaseOptions()
-args = options.parse()
-options.setup_option()
-
-vgg16_s16_net = VggStride16(args)
-net = vgg16_s16_net
-train_sets = [('2007', 'trainval')]
-
-if args.resume:
-    print('Resuming training, loading {}...'.format(args.resume))
-    vgg16_s16_net.load_weights(args.resume)
-else:
-    vgg_weights = torch.load(args.save_folder + args.basenet)
-    print('Loading base network...')
-    vgg16_s16_net.vgg.load_state_dict(vgg_weights)
-
-if args.cuda:
-    net = net.cuda()
-
-if args.visdom:
-    import visdom
-    viz = visdom.Visdom()
-
-def xavier(param):
-    init.xavier_uniform(param)
-
-def weights_init(m):
-    if isinstance(m, nn.Conv2d):
-        xavier(m.weight.data)
-        m.bias.data.zero_()
-
-if not args.resume:
-    print('Initializing weights...')
-    # initialize newly added layers' weights with xavier method
-    vgg16_s16_net.loc_layers.apply(weights_init)
-    vgg16_s16_net.cls_layers.apply(weights_init)
-
-optimizer = optim.SGD(net.parameters(), lr=args.lr,
-                      momentum=args.momentum, weight_decay=args.weight_decay)
-criterion = MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, args.cuda)
+# options = BaseOptions()
+# args = options.parse()
+# options.setup_option()
+#
+# vgg16_s16_net = VggStride16(args)
+# net = vgg16_s16_net
+# train_sets = [('2007', 'trainval')]
+#
+# if args.resume:
+#     print('Resuming training, loading {}...'.format(args.resume))
+#     vgg16_s16_net.load_weights(args.resume)
+# else:
+#     vgg_weights = torch.load(args.save_folder + args.basenet)
+#     print('Loading base network...')
+#     vgg16_s16_net.vgg.load_state_dict(vgg_weights)
+#
+# if args.cuda:
+#     net = net.cuda()
+#
+# if args.visdom:
+#     import visdom
+#     viz = visdom.Visdom()
+#
+# def xavier(param):
+#     init.xavier_uniform(param)
+#
+# def weights_init(m):
+#     if isinstance(m, nn.Conv2d):
+#         xavier(m.weight.data)
+#         m.bias.data.zero_()
+#
+# if not args.resume:
+#     print('Initializing weights...')
+#     # initialize newly added layers' weights with xavier method
+#     vgg16_s16_net.loc_layers.apply(weights_init)
+#     vgg16_s16_net.cls_layers.apply(weights_init)
+#
+# optimizer = optim.SGD(net.parameters(), lr=args.lr,
+#                       momentum=args.momentum, weight_decay=args.weight_decay)
+# criterion = MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, args.cuda)
 
 def train():
     net.train()
@@ -176,4 +176,14 @@ def adjust_learning_rate(optimizer, gamma, step):
 
 
 if __name__ == '__main__':
-    train()
+    train_sets = [('2007', 'trainval')]
+    options = BaseOptions()
+    args = options.parse()
+    options.setup_option()
+    dataset = VOCDetection(args.voc_root, train_sets, SSDAugmentation(
+        args.input_size, args.means), AnnotationTransform())
+    data_loader = data.DataLoader(dataset, args.batch_size, num_workers=args.num_workers,
+                                  shuffle=True, collate_fn=detection_collate, pin_memory=True)
+    model = DetModel(args)
+    for i in range(args.iterations):
+        model.train(data_loader, i)
