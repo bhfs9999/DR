@@ -110,7 +110,7 @@ class PriorBox(object):
             output.clamp_(max=1, min=0)
         return output
 
-vgg_stride16 = {
+vgg_stride16_config = {
     'feature_maps'  : [19],
     'min_dim'       : 300,
     'steps'         : [16,],

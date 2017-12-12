@@ -1,5 +1,20 @@
 import torch
 import os
+import torch.optim as optim
+from layers.modules import MultiBoxLoss
+import torch.backends.cudnn as cudnn
+import torch.nn.init as init
+from torch.autograd import Variable
+import torch.nn as nn
+from .det_model import VggStride16
+
+def xavier(param):
+    init.xavier_uniform(param)
+
+def weights_init(m):
+    if isinstance(m, nn.Conv2d):
+        xavier(m.weight.data)
+        m.bias.data.zero_()
 
 class BaseModel(object):
     def __init__(self,):
@@ -37,3 +52,76 @@ class BaseModel(object):
             self.lr_current = self.lr_current * self.args.gamma
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.lr_current
+
+class DetModel(BaseModel):
+    def __init__(self, args,):
+        super(DetModel, self).__init__()
+        self.args       = args
+        self.phase      = args.phase
+        self.model_name = args.model_name
+        self.cuda       = args.cuda
+        self.net        = eval(self.model_name+'(args)')
+        self.lr_current = self.args.lr
+        self.optimizer  = optim.SGD(self.net.parameters(), lr=args.lr,
+                                    momentum=args.momentum, weight_decay=args.weight_decay)
+        self.criterion  = MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda)
+
+    def init_model(self):
+        self.net.apply(weights_init)
+
+        if self.args.resume:
+            print('Resuming training, loading {}...'.format(self.args.resume))
+            self.load_weights(self.net, self.args.resume)
+        else:
+            vgg_weights = torch.load(self.args.save_folder + self.args.basenet)
+            print('Loading base network...')
+            self.net.vgg.load_state_dict(vgg_weights)
+
+        if self.args.cuda:
+            self.net        = self.net.cuda()
+            cudnn.benchmark = True
+
+    def test(self, x):
+        assert self.phase == 'test', "Command arg phase should be 'test'. "
+        self.net.val()
+        out = self.net(x, self.args)
+        return out
+
+    def train(self, dataloader, epoch):
+        self.net.train()
+        self._adjust_learning_rate(epoch)
+        for images, targets in dataloader:
+            if self.cuda:
+                images  = Variable(images.cuda())
+                targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
+            else:
+                images  = Variable(images)
+                targets = [Variable(anno, volatile=True) for anno in targets]
+
+            # forward
+            out = self.net(images)
+
+            #backward
+            self.optimizer.zero_grad()
+            loss_l, loss_c = self.criterion(out, targets)
+            loss = loss_c + loss_l
+            loss.backward()
+            self.optimizer.step()
+            print('===loss:{}==='.format(loss.data[0]))
+
+    def val(self, dataloader, epoch):
+        self.net.eval()
+        for images, targets in dataloader:
+            if self.cuda:
+                images = Variable(images.cuda())
+                targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
+            else:
+                images = Variable(images)
+                targets = [Variable(anno, volatile=True) for anno in targets]
+
+            # forward
+            out = self.net(images)
+            loss_l, loss_c = self.criterion(out, targets)
+            loss = loss_c + loss_l
+
+

@@ -46,6 +46,15 @@ class BaseOptions(object):
         self.parser.add_argument('--crop_size', default=300, type=int, help='size of cropped image')
         self.parser.add_argument('--input_size', default=300, type=int, help='model input size')
 
+        # eval
+        self.parser.add_argument('--trained_model', type=str, help='the path of trained model')
+        self.parser.add_argument('--eval_save_folder', default='eval/', type=str,
+                                 help='File path to save results')
+        self.parser.add_argument('--confidence_threshold', default=0.01, type=float,
+                                 help='Detection confidence threshold')
+        self.parser.add_argument('--top_k', default=5, type=int,
+                                 help='Further restrict the number of predictions to parse')
+
     def parse(self):
         if not self.initialized:
             self.initialize()
