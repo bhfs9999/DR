@@ -15,15 +15,13 @@ class VggStride16(nn.Module):
         self.crop_size   = args.crop_size
         self.vgg         = nn.ModuleList(vgg(base[self.crop_size], 3,))
         self.n_anchor    = len(vgg_stride16_config['scales']) * (len(vgg_stride16_config['aspect_ratios'][0]*2) + 1)
-        print('n_anchor', self.n_anchor)
-        # TODO: need more general
+
         self.loc_layers  = nn.Conv2d(self.vgg[-2].out_channels,
                                      self.n_anchor * 4, kernel_size=3, padding=1)
         self.cls_layers  = nn.Conv2d(self.vgg[-2].out_channels,
                                      self.n_anchor * self.num_classes, kernel_size=3, padding=1)
-        if self.phase == 'test':
-            self.softmax = nn.Softmax()
-            self.detect  = Detect(self.num_classes, 0, 200, 0.01, 0.45)
+        self.softmax     = nn.Softmax()
+        self.detect      = Detect(self.num_classes, 0, 200, 0.01, 0.45)
 
     def forward(self, x):
         for one_layer in self.vgg:
@@ -34,18 +32,20 @@ class VggStride16(nn.Module):
         loc = self.loc_layers(x).permute(0, 2, 3, 1).contiguous()
         cls = self.cls_layers(x).permute(0, 2, 3, 1).contiguous()
 
+        output = (
+            loc.view(loc.size(0), -1, 4),
+            cls.view(cls.size(0), -1, self.num_classes),
+            self.priors
+        )
+
         if self.phase == 'test':
-            output = self.detect(
+            detections = self.detect(
                 loc.view(loc.size(0), -1, 4),
                 self.softmax(cls.view(-1, self.num_classes)),
                 self.priors.type(type(x.data))
             )
-        else:
-            output = (
-                loc.view(loc.size(0), -1, 4),
-                cls.view(cls.size(0), -1, self.num_classes),
-                self.priors
-            )
+            return output, detections
+
         return output
 
 def vgg(cfg, i, batch_norm=False):

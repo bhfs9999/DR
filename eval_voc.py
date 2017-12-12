@@ -370,19 +370,26 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
 
     for i in range(num_images):
         im, gt, h, w = dataset.pull_item(i)
-
+        # print('h w ', h, w)             # h w is image shape
         x = Variable(im.unsqueeze(0))
         if args.cuda:
             x = x.cuda()
         _t['im_detect'].tic()
-        detections = net(x).data
+
+        # detections include 1 x n_classes x top_k x predict(conf, bbox of decode)
+        _, detections = net(x)
+        detections  = detections.data
         detect_time = _t['im_detect'].toc(average=False)
 
+        # print(detections)  # 1 x 21 x 200 x 5, 1 x n_classes x top_k x predict
         # skip j = 0, because it's the background class
         for j in range(1, detections.size(1)):
-            dets = detections[0, j, :]
+            dets = detections[0, j, :]          # dets 200 x 5
+            # print('det[:, 0]', dets[:, 0])      # dets[:, 0]  200
             mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
+            # print('mask', mask.size(), mask)
             dets = torch.masked_select(dets, mask).view(-1, 5)
+            # print('dets', dets.size())
             if dets.dim() == 0:
                 continue
             boxes = dets[:, 1:]

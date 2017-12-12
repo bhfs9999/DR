@@ -8,6 +8,7 @@ from model.base_model import DetModel
 import numpy as np
 import time
 from options.base_options import BaseOptions
+from tensorboardX import SummaryWriter
 
 # options = BaseOptions()
 # args = options.parse()
@@ -174,6 +175,9 @@ if __name__ == '__main__':
     options = BaseOptions()
     args = options.parse()
     options.setup_option()
+
+    writer = SummaryWriter()
+
     dataset = VOCDetection(args.voc_root, train_sets, SSDAugmentation(
         args.input_size, args.means), AnnotationTransform())
     data_loader = data.DataLoader(dataset, args.batch_size, num_workers=args.num_workers,
@@ -181,4 +185,11 @@ if __name__ == '__main__':
     model = DetModel(args)
     model.init_model()
     for i in range(args.iterations):
-        model.train(data_loader, i)
+        model.train(data_loader, i, writer)
+
+        if i % 5 == 0:
+            model.save_network(model.net, 'single_feature', epoch=i, )
+            print('saving in epoch {}'.format(i))
+
+    writer.eport_scalars_to_json("./all_scalars.json")
+    writer.close()

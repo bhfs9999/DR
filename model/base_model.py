@@ -7,6 +7,7 @@ import torch.nn.init as init
 from torch.autograd import Variable
 import torch.nn as nn
 from .det_model import VggStride16
+from utils.summary import *
 
 def xavier(param):
     init.xavier_uniform(param)
@@ -65,6 +66,7 @@ class DetModel(BaseModel):
         self.optimizer  = optim.SGD(self.net.parameters(), lr=args.lr,
                                     momentum=args.momentum, weight_decay=args.weight_decay)
         self.criterion  = MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda)
+        self.iter       = 0
 
     def init_model(self):
         self.net.apply(weights_init)
@@ -87,7 +89,7 @@ class DetModel(BaseModel):
         out = self.net(x, self.args)
         return out
 
-    def train(self, dataloader, epoch):
+    def train(self, dataloader, epoch, writer):
         self.net.train()
         self._adjust_learning_rate(epoch)
         for images, targets in dataloader:
@@ -107,10 +109,18 @@ class DetModel(BaseModel):
             loss = loss_c + loss_l
             loss.backward()
             self.optimizer.step()
-            print('===loss:{}==='.format(loss.data[0]))
 
-    def val(self, dataloader, epoch):
+            # log
+            scalars = [loss.data[0], loss_c.data[0], loss_l.data[0]]
+            names   = ['loss', 'loss_c', 'loss_l']
+            write_scalars(writer, scalars, names, self.iter, tag='train_loss')
+            if self.args.log_params:
+                write_hist_parameters(writer, self.net, self.iter)
+            self.iter += 1
+
+    def val(self, dataloader, epoch, writer):
         self.net.eval()
+        self.net.phase = 'test'
         for images, targets in dataloader:
             if self.cuda:
                 images = Variable(images.cuda())
@@ -120,8 +130,17 @@ class DetModel(BaseModel):
                 targets = [Variable(anno, volatile=True) for anno in targets]
 
             # forward
-            out = self.net(images)
+            out, detections = self.net(images)
             loss_l, loss_c = self.criterion(out, targets)
             loss = loss_c + loss_l
+
+            # log
+            scalars = [loss.data[0], loss_c.data[0], loss_l.data[0]]
+            names   = ['loss', 'loss_c', 'loss_l']
+            write_scalars(writer, scalars, names, self.iter, tag='val_loss')
+
+        # TODO: add metrics
+
+        self.net.phase = 'train'
 
 

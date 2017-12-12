@@ -34,6 +34,8 @@ class Detect(Function):
                 Shape: [batch*num_priors,num_classes]
             prior_data: (tensor) Prior boxes and variances from priorbox layers
                 Shape: [1,num_priors,4]
+        return:
+            output :1 x n_classes x top_k x predict(conf, bbox of decode(same as targets))
         """
         num = loc_data.size(0)  # batch size
         num_priors = prior_data.size(0)

@@ -35,7 +35,7 @@ class PriorBox(object):
 
     def forward(self):
         mean = []
-        # TODO merge these
+
         if self.version == 'single_feature':
             for k, f in enumerate(self.feature_maps):
                 for i, j in product(range(f), repeat=2):
