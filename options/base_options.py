@@ -18,28 +18,29 @@ class BaseOptions(object):
         self.parser.add_argument('phase', choices=['train', 'test'], help='choice train or test')
         self.parser.add_argument('exp_name', type=str, help='experiment name')
         self.parser.add_argument('--resume', default=None, type=str, help='Resume from checkpoint')
-        self.parser.add_argument('--num_workers', default=2, type=int, help='Number of workers used in dataloading')
+        self.parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
         self.parser.add_argument('--start_iter', default=0, type=int, help='Begin counting iterations starting from this value (should be used with resume)')
         self.parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
-        self.parser.add_argument('--log_iters', default=True, type=bool, help='Print the loss at each iteration')
+        self.parser.add_argument('--log_iters', default=True, type=str2bool, help='Print the loss at each iteration')
         self.parser.add_argument('--save_folder', default='weights/', help='Location to save checkpoint models')
-        self.parser.add_argument('--voc_root', default=VOCroot, help='Location of VOC root directory')
-        self.parser.add_argument('--log_params', default=False, type=bool, help='Whether to log params')
+        self.parser.add_argument('--log_params', default=False, type=str2bool, help='Whether to log params')
         self.parser.add_argument('--img_root', default='../data/2', type=str, help='img root')
         self.parser.add_argument('--xml_root', default='../data/newxml', type=str, help='xml_root')
+        self.parser.add_argument('--debug', default=False, type=str2bool, help='Whether to debug')
 
-        # model opt
+        # train opt
         self.parser.add_argument('--iterations', default=100, type=int, help='Number of training iterations')
         self.parser.add_argument('--version', default='single_feature', help='conv11_2(v2) or pool6(v1) as last layer')
         self.parser.add_argument('--lr', '--learning-rate', default=1e-4, type=float, help='initial learning rate')
         self.parser.add_argument('--stepvalues', default=[25, 50, 75], type=list, help='# of iter to change lr')
-        self.parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
+        self.parser.add_argument('--weight_decay', '--wd', default=5e-4, type=float, help='Weight decay for SGD')
         self.parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD lr')
         self.parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
         self.parser.add_argument('--batch_size', default=16, type=int, help='Batch size for training')
         self.parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
         self.parser.add_argument('--model_name', default='VggStride16', type=str, choices=['VggStride16'], help='model')
         self.parser.add_argument('--basenet', default='vgg16_reducedfc.pth', help='pretrained base model')
+        self.parser.add_argument('--save_freq', default=5, type=int, help='save weights every # epochs')
 
         # crop args
         self.parser.add_argument('--pad_value', default=0, type=int, help='pad_value of crop')
@@ -59,6 +60,11 @@ class BaseOptions(object):
                                  help='Detection confidence threshold')
         self.parser.add_argument('--top_k', default=5, type=int,
                                  help='Further restrict the number of predictions to parse')
+
+        # voc
+        self.parser.add_argument('--voc_root', default='~/data/VOCdevkit', help='Location of VOC root directory')
+        self.parser.add_argument('--voc', default=False, type=str2bool, help='whether to use voc')
+
     def parse(self):
         if not self.initialized:
             self.initialize()

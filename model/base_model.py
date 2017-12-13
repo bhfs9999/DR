@@ -8,6 +8,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 from .det_model import VggStride16
 from utils.summary import *
+import time
 
 def xavier(param):
     init.xavier_uniform(param)
@@ -92,7 +93,9 @@ class DetModel(BaseModel):
     def train(self, dataloader, epoch, writer):
         self.net.train()
         self._adjust_learning_rate(epoch)
+        t1 = time.time()
         for images, targets in dataloader:
+            t2 = time.time()
             if self.cuda:
                 images  = Variable(images.cuda())
                 targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
@@ -111,17 +114,27 @@ class DetModel(BaseModel):
             self.optimizer.step()
 
             # log
-            print('train loss:', loss.data[0])
-            scalars = [loss.data[0], loss_c.data[0], loss_l.data[0]]
-            names   = ['loss', 'loss_c', 'loss_l']
-            write_scalars(writer, scalars, names, self.iter, tag='train_loss')
-            if self.args.log_params:
-                write_hist_parameters(writer, self.net, self.iter)
+            if self.iter % 1 == 0:
+                print('train loss: {:.4f} | n_iter: {} | time: {:.2f}'.format(loss.data[0], self.iter, time.time() - t2))
+                t3 = time.time()
+                scalars = [loss.data[0], loss_c.data[0], loss_l.data[0]]
+                names   = ['loss', 'loss_c', 'loss_l']
+                write_scalars(writer, scalars, names, self.iter, tag='train_loss')
+
             self.iter += 1
+
+        if self.args.log_params:
+            write_hist_parameters(writer, self.net, self.iter)
+
+        print('epoch{} train finish, cost time {:.2f}'.format(epoch, time.time()-t1))
 
     def val(self, dataloader, epoch, writer):
         self.net.eval()
-        self.net.phase = 'test'
+        # self.net.phase = 'test'
+        losses   = []
+        losses_c = []
+        losses_l = []
+        t1       = time.time()
         for images, targets in dataloader:
             if self.cuda:
                 images = Variable(images.cuda())
@@ -131,18 +144,26 @@ class DetModel(BaseModel):
                 targets = [Variable(anno, volatile=True) for anno in targets]
 
             # forward
-            out, detections = self.net(images)
+            # out, detections = self.net(images)
+            out = self.net(images)
             loss_l, loss_c = self.criterion(out, targets)
             loss = loss_c + loss_l
 
-            # log
-            print('val loss', loss.data[0])
-            scalars = [loss.data[0], loss_c.data[0], loss_l.data[0]]
-            names   = ['loss', 'loss_c', 'loss_l']
-            write_scalars(writer, scalars, names, self.iter, tag='val_loss')
+            losses.append(loss.data[0])
+            losses_c.append(loss_c.data[0])
+            losses_l.append(loss_l.data[0])
+
+        # log
+        n = len(losses)
+        loss, loss_l, loss_c = sum(losses) / n, sum(losses_l) / n, sum(losses_c) / n
+        scalars = [loss, loss_c, loss_l]
+        names   = ['loss', 'loss_c', 'loss_l']
+        write_scalars(writer, scalars, names, epoch, tag='val_loss')
+        print('epoch{} val finish, cost time {:.2f}, loss: {:.4f}, loss_l: {:.4f}, loss_c: {:.4f}'.format(epoch,
+                                                                            time.time()-t1, loss, loss_l, loss_c))
 
         # TODO: add metrics
 
-        self.net.phase = 'train'
+        # self.net.phase = 'train'
 
 

@@ -16,10 +16,10 @@ dname2label = {
 }
 
 class DetectionDataset(data.Dataset):
-    def __init__(self, img_root, xml_root, filenames, args, transform=None,):
+    def __init__(self, img_root, xml_root, filenames, crop_size, shift_rate, pad_value, transform=None,):
         self.img_root = img_root
         self.samples, self.fname2labels = self.get_samples(xml_root, filenames)
-        self.crop = Crop(args.crop_size, args.shift_rate, args.pad_value)
+        self.crop = Crop(crop_size, shift_rate, pad_value)
         self.transform = transform
 
     def __getitem__(self, index):
@@ -39,6 +39,8 @@ class DetectionDataset(data.Dataset):
         filled_labels = self._fill_labels(coord_crop, width, height, all_label, label)
         labels += filled_labels
         labels = np.array(labels)
+
+        # TODO: clamp bbox
 
         # data aug
         if self.transform is not None:
