@@ -11,14 +11,14 @@ else:
     import xml.etree.ElementTree as ET
 
 dname2label = {
-    '视网膜前出血':0,
-    '视网膜深层出血':1,
+    '微血管瘤':0,
+    '出血斑':1,
 }
 
 class DetectionDataset(data.Dataset):
-    def __init__(self, img_root, xml_root, args, transform=None,):
+    def __init__(self, img_root, xml_root, filenames, args, transform=None,):
         self.img_root = img_root
-        self.samples, self.fname2labels = self.get_samples(xml_root)
+        self.samples, self.fname2labels = self.get_samples(xml_root, filenames)
         self.crop = Crop(args.crop_size, args.shift_rate, args.pad_value)
         self.transform = transform
 
@@ -44,20 +44,19 @@ class DetectionDataset(data.Dataset):
         if self.transform is not None:
             image, boxes, n_class = self.transform(image, labels[:, :4], labels[:, 4])
             labels = np.hstack((boxes, np.expand_dims(n_class, axis=1)))
-        # return torch.from_numpy(image).permute(2, 0, 1), labels
-        return image, labels[:, :5]
+        return torch.from_numpy(image).permute(2, 0, 1), labels[:, :5]
+        # return image, labels[:, :5]
 
     def __len__(self):
         return len(self.samples)
 
-    def get_samples(self, xml_root):
+    def get_samples(self, xml_root, xml_filenames):
         """
         :param xml_root
         :return:
-            samples: a list of samples like ((fname1, lable1), (fname1, label2), (fname2, label1)...)
+            samples: a list of samples like ((fname1, lable1), (fname1, label2), (fname2, label1)...) (182006, (x1 y1 x2 y2 0, 0))
             fname2labels: a dict map fname to its all labels (x1, y1, x2, y2, class, idx)
         """
-        xml_filenames = os.listdir(xml_root)
         fname2labels = OrderedDict()
         samples = []
         for xml_filename in xml_filenames:
@@ -72,7 +71,7 @@ class DetectionDataset(data.Dataset):
 
     def _get_fname2labels(self, xml_tree):
         fname2labels = OrderedDict()
-        fname  = xml_tree.find('filename').text.lower()
+        fname  = xml_tree.find('filename').text.lower().split('_')[0] + '.jpg'
         size = xml_tree.find('size')
 
         width  = int(size.find('width').text) - 1
@@ -82,6 +81,8 @@ class DetectionDataset(data.Dataset):
         for idx, obj in enumerate(xml_tree.iter('object')):
             dname = obj.find('name').text.strip()
             bbox = obj.find('bndbox')
+            if dname not in dname2label.keys():
+                continue
 
             label = []
             pts = ['xmin', 'ymin', 'xmax', 'ymax']
@@ -101,10 +102,6 @@ class DetectionDataset(data.Dataset):
             if this_label[-1] == label[-1]:
                 continue
             xmin, ymin, xmax, ymax = label[:4]
-            xmin = xmin * width
-            xmax = xmax * width
-            ymin = ymin * height
-            ymax = ymax * height
 
             if xmin > coord_crop[0] and ymin > coord_crop[1] \
                 and xmax < coord_crop[2] and ymax < coord_crop[3]:
@@ -121,41 +118,66 @@ class Crop(object):
         self.max_shift_rate = shift_rate
 
     def __call__(self, image, label):
-        width, height, channel = image.shape
+        '''
+        crop image and get new coord
+        :param image: images
+        :param label: label (x1, y1, x2, y2, cls)
+        :return:
+            image     : crop image (type: np.array)
+            coord_crop: list of cropped image's coord(ratio) to ori image
+            new_coord : new coord(ratio) to cropped image
+        '''
+        height, width, channel = image.shape        # 1017 1160
         xmin, ymin, xmax, ymax = label[:4]
-        xmin = xmin * width
-        xmax = xmax * width
-        ymin = ymin * height
-        ymax = ymax * height
+        xmin_t = xmin * width
+        xmax_t = xmax * width
+        ymin_t = ymin * height
+        ymax_t = ymax * height
+        # print(xmin_t, ymin_t, xmax_t, ymax_t)
 
         # shift
         shift_rate = (np.random.rand(2) - 0.5) * 2 * self.max_shift_rate
-        x_shift    = (self.crop_size - (xmax - xmin)) / 2. * shift_rate[0]
-        y_shift    = (self.crop_size - (ymax - ymin)) / 2. * shift_rate[1]
+        x_shift_t  = (self.crop_size - (xmax_t - xmin_t)) / 2. * shift_rate[0]
+        y_shift_t  = (self.crop_size - (ymax_t - ymin_t)) / 2. * shift_rate[1]
 
         # crop
-        xmin_crop = int(xmin - (self.crop_size - (xmax-xmin)) / 2 + x_shift)
-        ymin_crop = int(ymin - (self.crop_size - (ymax-ymin)) / 2 + y_shift)
-        xmax_crop = xmin_crop + self.crop_size
-        ymax_crop = ymin_crop + self.crop_size
-        image = image[max(xmin_crop, 0):min(xmax_crop, width),
-                      max(ymin_crop, 0):min(ymax_crop, height), :]
+        xmin_crop_t = int(xmin_t - (self.crop_size - (xmax_t-xmin_t)) / 2 + x_shift_t)
+        ymin_crop_t = int(ymin_t - (self.crop_size - (ymax_t-ymin_t)) / 2 + y_shift_t)
+        xmax_crop_t = xmin_crop_t + self.crop_size
+        ymax_crop_t = ymin_crop_t + self.crop_size
+        image = image[max(ymin_crop_t, 0):min(ymax_crop_t, height),
+                      max(xmin_crop_t, 0):min(xmax_crop_t, width), :]
+
+        # crop true value to ratio
+        xmin_crop  = float(xmin_crop_t) / width
+        ymin_crop  = float(ymin_crop_t) / height
+        xmax_crop  = float(xmax_crop_t) / width
+        ymax_crop  = float(ymax_crop_t) / height
+        coord_crop = [xmin_crop, ymin_crop, xmax_crop, ymax_crop]
 
         # pad
-        left_pad   = max(0, -xmin_crop)
-        right_pad  = max(0, xmax_crop-width)
-        top_pad    = max(0, -ymin_crop)
-        bottom_pad = max(0, ymax_crop-height)
-        pad = [[left_pad, right_pad], [top_pad, bottom_pad], [0, 0]]
+        left_pad   = max(0, -xmin_crop_t)
+        right_pad  = max(0, xmax_crop_t-width)
+        top_pad    = max(0, -ymin_crop_t)
+        bottom_pad = max(0, ymax_crop_t-height)
+        pad = [[top_pad, bottom_pad],[left_pad, right_pad], [0, 0]]
         image = np.lib.pad(image, pad, 'constant', constant_values=self.pad_value)
 
         # change coord
-        new_coord = change_coord([xmin, ymin, xmax, ymax], [xmin_crop, ymin_crop, xmax_crop, ymax_crop])
-        return image, (xmin_crop, ymin_crop, xmax_crop, ymax_crop), new_coord
+        new_coord = change_coord([xmin, ymin, xmax, ymax], coord_crop)
+        return image, coord_crop, new_coord
 
-def change_coord(old_cood, new_ori):
-    xmin, ymin, xmax, ymax = old_cood
+def change_coord(old_coord, new_ori):
+    '''
+    change old coord to new_ori
+    :param old_cood: old coord(ratio)
+    :param new_ori:  new coord(ratio)
+    :return:
+        a list of new coord(ratio) to new ori
+    '''
+    xmin, ymin, xmax, ymax = old_coord
     x_ori, y_ori, x_end, y_end = new_ori
+
     width  = x_end - x_ori
     height = y_end - y_ori
 
