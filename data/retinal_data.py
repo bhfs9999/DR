@@ -11,14 +11,14 @@ else:
     import xml.etree.ElementTree as ET
 
 dname2label = {
-    '视网膜前出血':0,
-    '视网膜深层出血':1,
+    '微血管瘤':0,
+    '出血斑':1,
 }
 
 class DetectionDataset(data.Dataset):
-    def __init__(self, img_root, xml_root, args, transform=None,):
+    def __init__(self, img_root, xml_root, filenames, args, transform=None,):
         self.img_root = img_root
-        self.samples, self.fname2labels = self.get_samples(xml_root)
+        self.samples, self.fname2labels = self.get_samples(xml_root, filenames)
         self.crop = Crop(args.crop_size, args.shift_rate, args.pad_value)
         self.transform = transform
 
@@ -50,14 +50,13 @@ class DetectionDataset(data.Dataset):
     def __len__(self):
         return len(self.samples)
 
-    def get_samples(self, xml_root):
+    def get_samples(self, xml_root, xml_filenames):
         """
         :param xml_root
         :return:
-            samples: a list of samples like ((fname1, lable1), (fname1, label2), (fname2, label1)...)
+            samples: a list of samples like ((fname1, lable1), (fname1, label2), (fname2, label1)...) (182006, (x1 y1 x2 y2 0, 0))
             fname2labels: a dict map fname to its all labels (x1, y1, x2, y2, class, idx)
         """
-        xml_filenames = os.listdir(xml_root)
         fname2labels = OrderedDict()
         samples = []
         for xml_filename in xml_filenames:
@@ -72,7 +71,7 @@ class DetectionDataset(data.Dataset):
 
     def _get_fname2labels(self, xml_tree):
         fname2labels = OrderedDict()
-        fname  = xml_tree.find('filename').text.lower()
+        fname  = xml_tree.find('filename').text.lower().split('_')[0] + '.jpg'
         size = xml_tree.find('size')
 
         width  = int(size.find('width').text) - 1
@@ -82,6 +81,8 @@ class DetectionDataset(data.Dataset):
         for idx, obj in enumerate(xml_tree.iter('object')):
             dname = obj.find('name').text.strip()
             bbox = obj.find('bndbox')
+            if dname not in dname2label.keys():
+                continue
 
             label = []
             pts = ['xmin', 'ymin', 'xmax', 'ymax']
@@ -132,7 +133,7 @@ class Crop(object):
         xmax_t = xmax * width
         ymin_t = ymin * height
         ymax_t = ymax * height
-        print(xmin_t, ymin_t, xmax_t, ymax_t)
+        # print(xmin_t, ymin_t, xmax_t, ymax_t)
 
         # shift
         shift_rate = (np.random.rand(2) - 0.5) * 2 * self.max_shift_rate

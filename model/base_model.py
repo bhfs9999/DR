@@ -111,6 +111,7 @@ class DetModel(BaseModel):
             self.optimizer.step()
 
             # log
+            print('train loss:', loss.data[0])
             scalars = [loss.data[0], loss_c.data[0], loss_l.data[0]]
             names   = ['loss', 'loss_c', 'loss_l']
             write_scalars(writer, scalars, names, self.iter, tag='train_loss')
@@ -135,6 +136,7 @@ class DetModel(BaseModel):
             loss = loss_c + loss_l
 
             # log
+            print('val loss', loss.data[0])
             scalars = [loss.data[0], loss_c.data[0], loss_l.data[0]]
             names   = ['loss', 'loss_c', 'loss_l']
             write_scalars(writer, scalars, names, self.iter, tag='val_loss')

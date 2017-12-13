@@ -25,13 +25,13 @@ def draw_bboxes_pre_label(img, bboxes_pre, bboxes_label, scores=None, labels=Non
         bboxes_label = ratio_to_real(img, bboxes_label, CHW)
     draw_bboxes(img, bboxes_pre, 'r')
     draw_bboxes(img, bboxes_label, 'g')
+
     if scores:
         draw_text(img, bboxes_pre, 'r', scores,)
     if labels:
         draw_text(img, bboxes_label, 'g', labels)
 
 def ratio_to_real(img, bboxes, CHW=True):
-    # Caution: H W is different from retianl_data.py width height
     if CHW:
         C, H, W = img.shape
     else:
