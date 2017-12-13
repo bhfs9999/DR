@@ -31,7 +31,7 @@ if __name__ == '__main__':
         existed_xmls = [fname.split('_')[0] for fname in os.listdir(args.xml_root)]
 
         all_idxes  = set(existed_imgs).intersection(set(existed_xmls))
-        all_xmlfnames = [idx+'_lable.xml' for idx in all_idxes][:2]
+        all_xmlfnames = [idx+'_lable.xml' for idx in all_idxes]
         n_data       = len(all_xmlfnames)
         train_fnames = all_xmlfnames[:int(n_data*0.8)]
         val_fnames   = all_xmlfnames[int(n_data*0.8):]

@@ -21,10 +21,9 @@ class BaseOptions(object):
         self.parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
         self.parser.add_argument('--start_iter', default=0, type=int, help='Begin counting iterations starting from this value (should be used with resume)')
         self.parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
-        self.parser.add_argument('--log_iters', default=True, type=str2bool, help='Print the loss at each iteration')
         self.parser.add_argument('--save_folder', default='weights/', help='Location to save checkpoint models')
         self.parser.add_argument('--log_params', default=False, type=str2bool, help='Whether to log params')
-        self.parser.add_argument('--img_root', default='../data/2', type=str, help='img root')
+        self.parser.add_argument('--img_root', default='../data/3', type=str, help='img root')
         self.parser.add_argument('--xml_root', default='../data/newxml', type=str, help='xml_root')
         self.parser.add_argument('--debug', default=False, type=str2bool, help='Whether to debug')
 

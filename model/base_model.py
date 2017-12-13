@@ -114,7 +114,7 @@ class DetModel(BaseModel):
             self.optimizer.step()
 
             # log
-            if self.iter % 1 == 0:
+            if self.iter % 10 == 0:
                 print('train loss: {:.4f} | n_iter: {} | time: {:.2f}'.format(loss.data[0], self.iter, time.time() - t2))
                 t3 = time.time()
                 scalars = [loss.data[0], loss_c.data[0], loss_l.data[0]]
