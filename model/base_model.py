@@ -171,7 +171,7 @@ class DetModel(BaseModel):
         print('epoch{} val finish, cost time {:.2f}, loss: {:.4f}, loss_l: {:.4f}, loss_c: {:.4f}'.format(epoch,
                                                                             time.time()-t1, loss, loss_l, loss_c))
 
-    def eval(self, dataset, writer, is_plot=True, is_save=False):
+    def eval(self, dataset, writer, is_plot=True, is_save=False, get_mAP=True):
         # TODO: add metrics
         assert self.net.phase == "test" and self.phase == "test", "phase should be test during eval"
         self.net.eval()
@@ -204,9 +204,6 @@ class DetModel(BaseModel):
             _, detections = self.net(x)
             detections = detections.data
             # print(detections)  # 1 x 21 x 200 x 5, 1 x n_classes x top_k x predict
-            scores_pred = []
-            bboxes_pred = []
-            classes_pred = []
 
             # skip j = 0, because it's the background class
             for j in range(1, detections.size(1)):
@@ -222,26 +219,30 @@ class DetModel(BaseModel):
                 all_boxes[j][i] = cls_dets     # cls_dets (n_obj, 5)
 
                 scores_pred  = cls_dets[:, 4]
+                scores_g_idx = scores_pred > self.args.conf_th
+                scores_pred  = scores_pred[scores_g_idx]
                 bboxes_pred  = cls_dets[:, :4]
-                classes_pred = [j] * len(cls_dets)
+                bboxes_pred  = bboxes_pred[scores_g_idx]
+                classes_pred = [j] * len(scores_pred)
 
             if is_plot:
                 image   = x.cpu().data.numpy()[0]
                 gt_bbox = gt[:, :4]
-                gt_cls  = gt[:, 4]
+                gt_cls  = gt[:, 4] + 1 # 0 is bg
                 image   = draw_bboxes_pre_label(image, bboxes_pred, gt_bbox, self.args.means, scores_pred, classes_pred,
                                                 gt_cls)
                 image   = ToTensor()(image)
                 image   = vutils.make_grid([image])
-                writer.add_image('Image', image, i)
+                writer.add_image('Image_{}'.format(i), image, 0)
 
 
             print('im_detect: {:d}/{:d}'.format(i + 1, num_images,))
 
-        pickle.dump(annots, open('annotations_cache/annots.pkl', 'wb'))
-        pickle.dump(ids, open('annotations_cache/ids.pkl', 'wb'))
-        output_dir = get_output_dir('pr_result', self.args.exp_name)
-        evaluate_detections(all_boxes, output_dir, dataset)
+        if get_mAP:
+            pickle.dump(annots, open('annotations_cache/annots.pkl', 'wb'))
+            pickle.dump(ids, open('annotations_cache/ids.pkl', 'wb'))
+            output_dir = get_output_dir('pr_result', self.args.exp_name)
+            evaluate_detections(all_boxes, output_dir, dataset)
 
             # self.net.phase = 'train'
 

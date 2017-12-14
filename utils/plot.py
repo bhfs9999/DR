@@ -11,14 +11,14 @@ color2vec = {
 font = cv2.FONT_HERSHEY_SIMPLEX
 
 
-def draw_bboxes(img, bboxes, color, thick=4):
+def draw_bboxes(img, bboxes, color, thick=1):
     for bbox in bboxes:
         bbox = [int(x) for x in bbox]
         cv2.rectangle(img, tuple(bbox[0:2]), tuple(bbox[2:4]), color2vec[color], thick)
     return img
 
 
-def draw_text(img, bboxes, color, texts, thick=3):
+def draw_text(img, bboxes, color, texts, thick=1):
     for i, text in enumerate(texts):
         bbox = [int(x) for x in bboxes[i]]
         cv2.putText(img, str(text), tuple(bbox[0:2]), font, 0.5, color2vec[color], thick)
@@ -30,7 +30,6 @@ def backtrans_mean(img, mean):
 def draw_bboxes_pre_label(img, bboxes_pre, bboxes_label,
                           means, scores=None, classes_pre=None, labels=None, is_ratio=True, CHW=True):
     '''
-
     :param img: img (C, H, W) or (H, W, C)
     :param bboxes_pre: np list of
     :param bboxes_label:
@@ -55,8 +54,8 @@ def draw_bboxes_pre_label(img, bboxes_pre, bboxes_label,
     img = draw_bboxes(img, bboxes_pre, 'r')
     img = draw_bboxes(img, bboxes_label, 'g')
 
-    if scores is not None and classes_pre is not None:
-        texts = [str(classes_pre[i]) + ':' + str(scores[i]) for i in range(len(classes_pre))]
+    if scores is not None and classes_pre is not None and len(scores) > 0 and len(classes_pre) > 0:
+        texts = [str(classes_pre[i]) + ' : ' + str(round(scores[i], 3)) for i in range(len(classes_pre))]
         draw_text(img, bboxes_pre, 'r', texts,)
     if labels is not None:
         draw_text(img, bboxes_label, 'g', labels)

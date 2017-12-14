@@ -34,7 +34,7 @@ if __name__ == '__main__':
         all_xmlfnames = [idx+'_lable.xml' for idx in all_idxes]
         sorted(all_xmlfnames)
         n_data       = len(all_xmlfnames)
-        eval_fnames   = all_xmlfnames[int(n_data*0.8):][:1000]
+        eval_fnames   = all_xmlfnames[int(n_data*0.8):][:10]
         print('eval_fnames len: {}'.format(len(eval_fnames)))
 
         # args.means = [0, 0, 0]

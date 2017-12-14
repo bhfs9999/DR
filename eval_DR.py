@@ -279,7 +279,6 @@ cachedir: Directory for caching the annotations
         nd = len(image_ids)
         tp = np.zeros(nd)
         fp = np.zeros(nd)
-        print('image_ids', image_ids)
         for d in range(nd):
             R = class_recs[int(image_ids[d])]
             bb = BB[d, :].astype(float)
