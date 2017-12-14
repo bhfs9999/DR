@@ -20,16 +20,16 @@ def weights_init(m):
 
 class BaseModel(object):
     def __init__(self,):
-        pass
+        raise NotImplementedError
 
     def init_model(self):
-        pass
+        raise NotImplementedError
 
     def train(self, dataloader, epoch):
-        pass
+        raise NotImplementedError
 
     def val(self, dataloader, epoch):
-        pass
+        raise NotImplementedError
 
     def load_weights(self, net, base_file):
         other, ext = os.path.splitext(base_file)
@@ -57,7 +57,6 @@ class BaseModel(object):
 
 class DetModel(BaseModel):
     def __init__(self, args,):
-        super(DetModel, self).__init__()
         self.args       = args
         self.phase      = args.phase
         self.model_name = args.model_name
@@ -124,7 +123,7 @@ class DetModel(BaseModel):
             self.iter += 1
 
         if self.args.log_params:
-            write_hist_parameters(writer, self.net, self.iter)
+            write_hist_parameters(writer, self.net, epoch)
 
         print('epoch{} train finish, cost time {:.2f}'.format(epoch, time.time()-t1))
 

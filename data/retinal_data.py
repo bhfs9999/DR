@@ -27,7 +27,6 @@ class DetectionDataset(data.Dataset):
         fname, label = self.samples[index]
         fpath = os.path.join(self.img_root, fname.lower())
         image = np.array(pil_loader(fpath))
-        width, height, channel = image.shape
 
         # crop image
         image, coord_crop, new_bbox = self.crop(image, label)
@@ -36,7 +35,7 @@ class DetectionDataset(data.Dataset):
 
         # fill labels
         all_label = self.fname2labels[fname]
-        filled_labels = self._fill_labels(coord_crop, width, height, all_label, label)
+        filled_labels = self._fill_labels(coord_crop, all_label, label)
         labels += filled_labels
         labels = np.array(labels)
 
@@ -98,7 +97,7 @@ class DetectionDataset(data.Dataset):
         fname2labels[fname] = labels
         return fname2labels
 
-    def _fill_labels(self, coord_crop, width, height, labels, this_label):
+    def _fill_labels(self, coord_crop, labels, this_label):
         filled_labels = []
         for label in labels:
             if this_label[-1] == label[-1]:

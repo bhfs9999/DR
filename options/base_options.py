@@ -28,10 +28,10 @@ class BaseOptions(object):
         self.parser.add_argument('--debug', default=False, type=str2bool, help='Whether to debug')
 
         # train opt
-        self.parser.add_argument('--iterations', default=100, type=int, help='Number of training iterations')
+        self.parser.add_argument('--max_epochs', default=40, type=int, help='Number of training iterations')
         self.parser.add_argument('--version', default='single_feature', help='conv11_2(v2) or pool6(v1) as last layer')
         self.parser.add_argument('--lr', '--learning-rate', default=1e-4, type=float, help='initial learning rate')
-        self.parser.add_argument('--stepvalues', default=[25, 50, 75], type=list, help='# of iter to change lr')
+        self.parser.add_argument('--stepvalues', default=[10, 20, 30], type=list, help='# of iter to change lr')
         self.parser.add_argument('--weight_decay', '--wd', default=5e-4, type=float, help='Weight decay for SGD')
         self.parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD lr')
         self.parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
