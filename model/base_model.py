@@ -13,6 +13,7 @@ import numpy as np
 from utils.plot import draw_bboxes_pre_label
 import torchvision.utils as vutils
 from torchvision.transforms import ToTensor
+from eval_DR import *
 
 def xavier(param):
     init.xavier_uniform(param)
@@ -175,17 +176,25 @@ class DetModel(BaseModel):
         assert self.net.phase == "test" and self.phase == "test", "phase should be test during eval"
         self.net.eval()
         num_images = len(dataset)
-        num_images = 10
+        # num_images = 10
         # all detections are collected into:
         #    all_boxes[cls][image] = N x 5 array of detections in
         #    (x1, y1, x2, y2, score)
         all_boxes = [[[] for _ in range(num_images)]
-                     for _ in range(self.args.num_classes + 1)]
+                     for _ in range(self.args.num_classes)]
 
         gts = []
+        annots = {}
+        idx2name = {0:'MA', 1:'BS'}
+        ids = []
         for i in range(num_images):
             # gt (n_obj, 5) of this im
-            im, gt = dataset[i]
+            im, gt, id = dataset[i]
+            ids.append(id)
+            objects = []
+            for object in gt:
+                objects.append({'bbox':object[:4], 'name':idx2name[object[4]], 'difficult':0})
+            annots[id] = objects
             gts.append(gt)
             x = Variable(im.unsqueeze(0))
             if self.cuda:
@@ -194,14 +203,12 @@ class DetModel(BaseModel):
             # detections include 1 x n_classes x top_k x predict(conf, bbox of decode)
             _, detections = self.net(x)
             detections = detections.data
-
             # print(detections)  # 1 x 21 x 200 x 5, 1 x n_classes x top_k x predict
-            # skip j = 0, because it's the background class
-
             scores_pred = []
             bboxes_pred = []
             classes_pred = []
 
+            # skip j = 0, because it's the background class
             for j in range(1, detections.size(1)):
                 dets = detections[0, j, :]  # dets 200 x 5
                 mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
@@ -231,7 +238,10 @@ class DetModel(BaseModel):
 
             print('im_detect: {:d}/{:d}'.format(i + 1, num_images,))
 
-
+        pickle.dump(annots, open('annotations_cache/annots.pkl', 'wb'))
+        pickle.dump(ids, open('annotations_cache/ids.pkl', 'wb'))
+        output_dir = get_output_dir('pr_result', self.args.exp_name)
+        evaluate_detections(all_boxes, output_dir, dataset)
 
             # self.net.phase = 'train'
 

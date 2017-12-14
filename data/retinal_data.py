@@ -16,15 +16,16 @@ dname2label = {
 }
 
 class DetectionDataset(data.Dataset):
-    def __init__(self, img_root, xml_root, filenames, crop_size, shift_rate, pad_value, transform=None,):
+    def __init__(self, img_root, xml_root, filenames, crop_size, shift_rate, pad_value, transform=None, is_test=False):
         self.img_root = img_root
         self.samples, self.fname2labels = self.get_samples(xml_root, filenames)
         self.crop = Crop(crop_size, shift_rate, pad_value)
         self.transform = transform
+        self.is_test   = is_test
 
     def __getitem__(self, index):
         labels = []
-        fname, label = self.samples[index]
+        fname, label, id = self.samples[index]
         fpath = os.path.join(self.img_root, fname.lower())
         image = np.array(pil_loader(fpath))
 
@@ -45,7 +46,10 @@ class DetectionDataset(data.Dataset):
         if self.transform is not None:
             image, boxes, n_class = self.transform(image, labels[:, :4], labels[:, 4])
             labels = np.hstack((boxes, np.expand_dims(n_class, axis=1)))
-        return torch.from_numpy(image).permute(2, 0, 1), labels[:, :5]
+        if self.is_test:
+            return torch.from_numpy(image).permute(2, 0, 1), labels[:, :5], id
+        else:
+            return torch.from_numpy(image).permute(2, 0, 1), labels[:, :5],
         # return image, labels[:, :5]
 
     def __len__(self):
@@ -60,6 +64,7 @@ class DetectionDataset(data.Dataset):
         """
         fname2labels = OrderedDict()
         samples = []
+        id = 0
         for xml_filename in xml_filenames:
             xml_filepath = os.path.join(xml_root, xml_filename)
             xml_tree = ET.parse(xml_filepath).getroot()
@@ -67,7 +72,8 @@ class DetectionDataset(data.Dataset):
             fname2labels.update(fname2labels_one)
             for fname, labels in fname2labels_one.items():
                 for label in labels:
-                    samples.append([fname, label])
+                    samples.append([fname, label, id])
+                    id += 1
         return samples, fname2labels
 
     def _get_fname2labels(self, xml_tree):
