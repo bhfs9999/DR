@@ -53,6 +53,7 @@ class BaseOptions(object):
 
         # eval
         self.parser.add_argument('--trained_model', type=str, help='the path of trained model')
+        self.parser.add_argument('--conf_th', default=0.01, type=float, help='the path of trained model')
         self.parser.add_argument('--eval_save_folder', default='eval/', type=str,
                                  help='File path to save results')
         self.parser.add_argument('--confidence_threshold', default=0.01, type=float,
@@ -61,7 +62,7 @@ class BaseOptions(object):
                                  help='Further restrict the number of predictions to parse')
 
         # voc
-        self.parser.add_argument('--voc_root', default='~/data/VOCdevkit', help='Location of VOC root directory')
+        self.parser.add_argument('--voc_root', default='/home/xav/data/VOCdevkit', help='Location of VOC root directory')
         self.parser.add_argument('--voc', default=False, type=str2bool, help='whether to use voc')
 
     def parse(self):
@@ -84,10 +85,11 @@ class BaseOptions(object):
             torch.set_default_tensor_type('torch.FloatTensor')
         # cfg = (v1, v2)[args.version == 'v2']
 
-        if not os.path.exists(self.opt.save_folder):
-            os.mkdir(self.opt.save_folder)
+        if self.opt.phase == 'train':
+            if not os.path.exists(self.opt.save_folder):
+                os.mkdir(self.opt.save_folder)
 
-        model_save_path = os.path.join(self.opt.save_folder, self.opt.exp_name)
-        print('model save path:', model_save_path)
-        if not os.path.exists(model_save_path):
-            os.mkdir(model_save_path)
+            model_save_path = os.path.join(self.opt.save_folder, self.opt.exp_name)
+            print('model save path:', model_save_path)
+            if not os.path.exists(model_save_path):
+                os.mkdir(model_save_path)

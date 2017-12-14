@@ -9,6 +9,10 @@ import torch.nn as nn
 from .det_model import VggStride16
 from utils.summary import *
 import time
+import numpy as np
+from utils.plot import draw_bboxes_pre_label
+import torchvision.utils as vutils
+from torchvision.transforms import ToTensor
 
 def xavier(param):
     init.xavier_uniform(param)
@@ -71,13 +75,18 @@ class DetModel(BaseModel):
     def init_model(self):
         self.net.apply(weights_init)
 
-        if self.args.resume:
+        if self.args.resume and self.phase == 'train':
             print('Resuming training, loading {}...'.format(self.args.resume))
             self.load_weights(self.net, self.args.resume)
-        else:
+        elif self.phase == 'train':
             vgg_weights = torch.load(self.args.save_folder + self.args.basenet)
             print('Loading base network...')
             self.net.vgg.load_state_dict(vgg_weights)
+
+        if self.phase == 'test':
+            model_path = os.path.join(self.args.save_folder, self.args.exp_name, self.args.trained_model)
+            print('load trained model from {}'.format(model_path))
+            self.load_weights(self.net, model_path)
 
         if self.args.cuda:
             self.net        = self.net.cuda()
@@ -161,8 +170,69 @@ class DetModel(BaseModel):
         print('epoch{} val finish, cost time {:.2f}, loss: {:.4f}, loss_l: {:.4f}, loss_c: {:.4f}'.format(epoch,
                                                                             time.time()-t1, loss, loss_l, loss_c))
 
+    def eval(self, dataset, writer, is_plot=True, is_save=False):
         # TODO: add metrics
+        assert self.net.phase == "test" and self.phase == "test", "phase should be test during eval"
+        self.net.eval()
+        num_images = len(dataset)
+        num_images = 10
+        # all detections are collected into:
+        #    all_boxes[cls][image] = N x 5 array of detections in
+        #    (x1, y1, x2, y2, score)
+        all_boxes = [[[] for _ in range(num_images)]
+                     for _ in range(self.args.num_classes + 1)]
 
-        # self.net.phase = 'train'
+        gts = []
+        for i in range(num_images):
+            # gt (n_obj, 5) of this im
+            im, gt = dataset[i]
+            gts.append(gt)
+            x = Variable(im.unsqueeze(0))
+            if self.cuda:
+                x = x.cuda()
+
+            # detections include 1 x n_classes x top_k x predict(conf, bbox of decode)
+            _, detections = self.net(x)
+            detections = detections.data
+
+            # print(detections)  # 1 x 21 x 200 x 5, 1 x n_classes x top_k x predict
+            # skip j = 0, because it's the background class
+
+            scores_pred = []
+            bboxes_pred = []
+            classes_pred = []
+
+            for j in range(1, detections.size(1)):
+                dets = detections[0, j, :]  # dets 200 x 5
+                mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
+                dets = torch.masked_select(dets, mask).view(-1, 5)
+                if dets.dim() == 0:
+                    continue
+                boxes = dets[:, 1:]
+                scores = dets[:, 0].cpu().numpy()
+                cls_dets = np.hstack((boxes.cpu().numpy(), scores[:, np.newaxis])) \
+                    .astype(np.float32, copy=False)
+                all_boxes[j][i] = cls_dets     # cls_dets (n_obj, 5)
+
+                scores_pred  = cls_dets[:, 4]
+                bboxes_pred  = cls_dets[:, :4]
+                classes_pred = [j] * len(cls_dets)
+
+            if is_plot:
+                image   = x.cpu().data.numpy()[0]
+                gt_bbox = gt[:, :4]
+                gt_cls  = gt[:, 4]
+                image   = draw_bboxes_pre_label(image, bboxes_pred, gt_bbox, self.args.means, scores_pred, classes_pred,
+                                                gt_cls)
+                image   = ToTensor()(image)
+                image   = vutils.make_grid([image])
+                writer.add_image('Image', image, i)
+
+
+            print('im_detect: {:d}/{:d}'.format(i + 1, num_images,))
+
+
+
+            # self.net.phase = 'train'
 
 

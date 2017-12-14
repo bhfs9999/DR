@@ -21,7 +21,7 @@ class VggStride16(nn.Module):
         self.cls_layers  = nn.Conv2d(self.vgg[-2].out_channels,
                                      self.n_anchor * self.num_classes, kernel_size=3, padding=1)
         self.softmax     = nn.Softmax()
-        self.detect      = Detect(self.num_classes, 0, 200, 0.01, 0.45)
+        self.detect      = Detect(self.num_classes, 0, 200, args.conf_th, 0.45)    # conf 0.01
 
     def forward(self, x):
         for one_layer in self.vgg:

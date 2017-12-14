@@ -14,7 +14,8 @@ from data import VOCroot
 from data import VOC_CLASSES as labelmap
 import torch.utils.data as data
 
-from data import AnnotationTransform, VOCDetection, BaseTransform, VOC_CLASSES
+from data import AnnotationTransform, VOCDetection, VOC_CLASSES
+from utils.augmentations import BaseTransform
 from model.base_model import DetModel
 
 import sys
@@ -139,6 +140,7 @@ def write_voc_results_file(all_boxes, dataset):
     for cls_ind, cls in enumerate(labelmap):
         print('Writing {:s} VOC results file'.format(cls))
         filename = get_voc_results_file_template(set_type, cls)
+        print('filename', filename)
         with open(filename, 'wt') as f:
             for im_ind, index in enumerate(dataset.ids):
                 dets = all_boxes[cls_ind+1][im_ind]
@@ -357,6 +359,7 @@ def test_net(save_folder, net, cuda, dataset, transform, top_k,
              im_size=300, thresh=0.05):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(dataset)
+    num_images = 10
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
@@ -420,8 +423,9 @@ def evaluate_detections(box_list, output_dir, dataset):
 if __name__ == '__main__':
     # load net
     num_classes = len(VOC_CLASSES) + 1 # +1 background
+    args.num_classes = num_classes
     model = DetModel(args) # initialize SSD
-    model.init_model()
+    # model.init_model()
     model.load_weights(model.net, args.trained_model)
     model.net.eval()
     print('Finished loading model!')

@@ -113,9 +113,9 @@ class DetectionDataset(data.Dataset):
 
 class Crop(object):
     def __init__(self, crop_size, shift_rate, pad_value=0):
-        self.crop_size  = crop_size
-        self.pad_value  = pad_value
-        self.pad_value  = pad_value
+        self.crop_size = crop_size
+        self.pad_value = pad_value
+        self.pad_value = pad_value
         self.max_shift_rate = shift_rate
 
     def __call__(self, image, label):

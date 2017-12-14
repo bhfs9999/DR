@@ -423,7 +423,6 @@ def base_transform(image, size, mean):
     x = x.astype(np.float32)
     return x
 
-
 class BaseTransform:
     def __init__(self, size, mean):
         self.size = size

@@ -67,7 +67,8 @@ class Detect(Function):
                 self.output[i, cl, :count] = \
                     torch.cat((scores[ids[:count]].unsqueeze(1),
                                boxes[ids[:count]]), 1)
-        flt = self.output.view(-1, 5)
+        # print(self.output.size())
+        flt = self.output.contiguous().view(-1, 5)
         _, idx = flt[:, 0].sort(0)
         _, rank = idx.sort(0)
         flt[(rank >= self.top_k).unsqueeze(1).expand_as(flt)].fill_(0)
