@@ -1,19 +1,17 @@
 import torch
-import os
-import torch.optim as optim
-from layers.modules import MultiBoxLoss
 import torch.backends.cudnn as cudnn
-import torch.nn.init as init
-from torch.autograd import Variable
 import torch.nn as nn
-from .det_model import VggStride16
-from utils.summary import *
-import time
-import numpy as np
-from utils.plot import draw_bboxes_pre_label
+import torch.nn.init as init
+import torch.optim as optim
 import torchvision.utils as vutils
+from torch.autograd import Variable
 from torchvision.transforms import ToTensor
-from eval_DR import *
+from .det_model import VggStride16
+from layers.modules import MultiBoxLoss
+from utils.eval_DR import *
+from utils.plot import draw_bboxes_pre_label
+from utils.summary import *
+
 
 def xavier(param):
     init.xavier_uniform(param)
@@ -40,15 +38,20 @@ class BaseModel(object):
         other, ext = os.path.splitext(base_file)
         if ext == '.pkl' or '.pth':
             print('Loading weights into state dict...')
-            net.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
+            load_dict = torch.load(base_file, map_location=lambda storage, loc: storage)
+            net_state_dict = load_dict['net_state_dict']
+            net.load_state_dict(net_state_dict)
+            epoch = load_dict['epoch']
             print('Finished!')
+            return epoch
         else:
             print('Sorry only .pth and .pkl files supported.')
 
     def save_network(self, net, net_name, epoch, label=''):
         save_fname  = '%s_%s_%s.pth' % (epoch, net_name, label)
         save_path   = os.path.join(self.args.save_folder, self.args.exp_name, save_fname)
-        torch.save(net.state_dict(), save_path)
+        save_dict = {'net_state_dict': net.state_dict, 'exp_name': self.args.exp_name, 'epoch': epoch}
+        torch.save(save_dict, save_path)
 
     def _adjust_learning_rate(self, epoch):
         """Sets the learning rate to the initial LR decayed by 10 at every specified step
@@ -75,10 +78,10 @@ class DetModel(BaseModel):
 
     def init_model(self):
         self.net.apply(weights_init)
-
+        epoch = 0
         if self.args.resume and self.phase == 'train':
             print('Resuming training, loading {}...'.format(self.args.resume))
-            self.load_weights(self.net, self.args.resume)
+            epoch = self.load_weights(self.net, self.args.resume)
         elif self.phase == 'train':
             vgg_weights = torch.load(self.args.save_folder + self.args.basenet)
             print('Loading base network...')
@@ -87,11 +90,12 @@ class DetModel(BaseModel):
         if self.phase == 'test':
             model_path = os.path.join(self.args.save_folder, self.args.exp_name, self.args.trained_model)
             print('load trained model from {}'.format(model_path))
-            self.load_weights(self.net, model_path)
+            epoch = self.load_weights(self.net, model_path)
 
         if self.args.cuda:
             self.net        = self.net.cuda()
             cudnn.benchmark = True
+        return epoch
 
     def test(self, x):
         assert self.phase == 'test', "Command arg phase should be 'test'. "
@@ -171,15 +175,10 @@ class DetModel(BaseModel):
         print('epoch{} val finish, cost time {:.2f}, loss: {:.4f}, loss_l: {:.4f}, loss_c: {:.4f}'.format(epoch,
                                                                             time.time()-t1, loss, loss_l, loss_c))
 
-    def eval(self, dataset, writer, is_plot=True, is_save=False, get_mAP=True):
-        # TODO: add metrics
+    def eval(self, dataset, writer, is_plot=True, is_save=False, get_mAP=True, plot_which='all'):
         assert self.net.phase == "test" and self.phase == "test", "phase should be test during eval"
         self.net.eval()
         num_images = len(dataset)
-        # num_images = 10
-        # all detections are collected into:
-        #    all_boxes[cls][image] = N x 5 array of detections in
-        #    (x1, y1, x2, y2, score)
         all_boxes = [[[] for _ in range(num_images)]
                      for _ in range(self.args.num_classes)]
 
@@ -205,8 +204,18 @@ class DetModel(BaseModel):
             detections = detections.data
             # print(detections)  # 1 x 21 x 200 x 5, 1 x n_classes x top_k x predict
 
+            if plot_which == 'all':
+                b = 1
+                e = detections.size(1)
+            elif plot_which == 'MA':
+                b = 1
+                e = 2
+            elif plot_which == 'BP':
+                b = 2
+                e = 3
+
             # skip j = 0, because it's the background class
-            for j in range(1, detections.size(1)):
+            for j in range(b, e):
                 dets = detections[0, j, :]  # dets 200 x 5
                 mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
                 dets = torch.masked_select(dets, mask).view(-1, 5)

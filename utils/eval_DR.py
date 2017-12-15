@@ -5,62 +5,18 @@
 """
 
 from __future__ import print_function
-import torch
-import torch.nn as nn
-import torch.backends.cudnn as cudnn
-import torchvision.transforms as transforms
-from torch.autograd import Variable
-from data import VOCroot
-# from data import VOC_CLASSES as labelmap
-import torch.utils.data as data
-
-from data import AnnotationTransform, VOCDetection, VOC_CLASSES
-from utils.augmentations import BaseTransform
 
 import sys
 import os
 import time
-import argparse
 import numpy as np
 import pickle
-import cv2
-from options.base_options import BaseOptions
-
-if sys.version_info[0] == 2:
-    import xml.etree.cElementTree as ET
-else:
-    import xml.etree.ElementTree as ET
-
-def str2bool(v):
-    return v.lower() in ("yes", "true", "t", "1")
+from options.base_options import DetOptions
 
 labelmap = ('MA', 'BS')
-# parser = argparse.ArgumentParser(description='Single Shot MultiBox Detection')
-# parser.add_argument('--trained_model', default='weights/ssd300_mAP_77.43_v2.pth',
-#                     type=str, help='Trained state_dict file path to open')
-# parser.add_argument('--save_folder', default='eval/', type=str,
-#                     help='File path to save results')
-# parser.add_argument('--confidence_threshold', default=0.01, type=float,
-#                     help='Detection confidence threshold')
-# parser.add_argument('--top_k', default=5, type=int,
-#                     help='Further restrict the number of predictions to parse')
-# parser.add_argument('--cuda', default=True, type=str2bool,
-#                     help='Use cuda to train model')
-# parser.add_argument('--voc_root', default=VOCroot, help='Location of VOC root directory')
-#
-# args = parser.parse_args()
-#
-# if not os.path.exists(args.save_folder):
-#     os.mkdir(args.save_folder)
-#
-# if args.cuda and torch.cuda.is_available():
-#     torch.set_default_tensor_type('torch.cuda.FloatTensor')
-# else:
-#     torch.set_default_tensor_type('torch.FloatTensor')
-
-options = BaseOptions()
-args = options.parse()
-options.setup_option()
+# options = DetOptions()
+# args = options.parse()
+# options.setup_option()
 devkit_path = './annotations_cache'
 # dataset_mean = (104, 117, 123)
 set_type = 'test'
@@ -88,27 +44,6 @@ class Timer(object):
             return self.average_time
         else:
             return self.diff
-
-
-def parse_rec(filename):
-    """ Parse a PASCAL VOC xml file """
-    tree = ET.parse(filename)
-    objects = []
-    for obj in tree.findall('object'):
-        obj_struct = {}
-        obj_struct['name'] = obj.find('name').text
-        obj_struct['pose'] = obj.find('pose').text
-        obj_struct['truncated'] = int(obj.find('truncated').text)
-        obj_struct['difficult'] = int(obj.find('difficult').text)
-        bbox = obj.find('bndbox')
-        obj_struct['bbox'] = [int(bbox.find('xmin').text) - 1,
-                              int(bbox.find('ymin').text) - 1,
-                              int(bbox.find('xmax').text) - 1,
-                              int(bbox.find('ymax').text) - 1]
-        objects.append(obj_struct)
-
-    return objects
-
 
 def get_output_dir(name, phase):
     """Return the directory where experimental artifacts are placed.
@@ -326,81 +261,6 @@ cachedir: Directory for caching the annotations
 
     return rec, prec, ap
 
-
-# def test_net(save_folder, net, cuda, dataset, transform, top_k,
-#              im_size=300, thresh=0.05):
-#     """Test a Fast R-CNN network on an image database."""
-#     num_images = len(dataset)
-#     num_images = 10
-#     # all detections are collected into:
-#     #    all_boxes[cls][image] = N x 5 array of detections in
-#     #    (x1, y1, x2, y2, score)
-#     all_boxes = [[[] for _ in range(num_images)]
-#                  for _ in range(len(labelmap)+1)]
-#
-#     # timers
-#     _t = {'im_detect': Timer(), 'misc': Timer()}
-#     output_dir = get_output_dir('ssd300_120000', set_type)
-#     det_file = os.path.join(output_dir, 'detections.pkl')
-#
-#     for i in range(num_images):
-#         im, gt, h, w = dataset.pull_item(i)
-#         # print('h w ', h, w)             # h w is image shape
-#         x = Variable(im.unsqueeze(0))
-#         if args.cuda:
-#             x = x.cuda()
-#         _t['im_detect'].tic()
-#
-#         # detections include 1 x n_classes x top_k x predict(conf, bbox of decode)
-#         _, detections = net(x)
-#         detections  = detections.data
-#         detect_time = _t['im_detect'].toc(average=False)
-#
-#         # print(detections)  # 1 x 21 x 200 x 5, 1 x n_classes x top_k x predict
-#         # skip j = 0, because it's the background class
-#         for j in range(1, detections.size(1)):
-#             dets = detections[0, j, :]          # dets 200 x 5
-#             # print('det[:, 0]', dets[:, 0])      # dets[:, 0]  200
-#             mask = dets[:, 0].gt(0.).expand(5, dets.size(0)).t()
-#             # print('mask', mask.size(), mask)
-#             dets = torch.masked_select(dets, mask).view(-1, 5)
-#             # print('dets', dets.size())
-#             if dets.dim() == 0:
-#                 continue
-#             boxes = dets[:, 1:]
-#             boxes[:, 0] *= w
-#             boxes[:, 2] *= w
-#             boxes[:, 1] *= h
-#             boxes[:, 3] *= h
-#             scores = dets[:, 0].cpu().numpy()
-#             cls_dets = np.hstack((boxes.cpu().numpy(), scores[:, np.newaxis])) \
-#                 .astype(np.float32, copy=False)
-#             all_boxes[j][i] = cls_dets
-#
-#         print('im_detect: {:d}/{:d} {:.3f}s'.format(i + 1,
-#                                                     num_images, detect_time))
-#
-#     with open(det_file, 'wb') as f:
-#         pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
-#
-#     print('Evaluating detections')
-#     evaluate_detections(all_boxes, output_dir, dataset)
-
-
 def evaluate_detections(box_list, output_dir, dataset):
     write_voc_results_file(box_list, dataset)
     do_python_eval(output_dir)
-
-
-# if __name__ == '__main__':
-#     # load net
-#     num_classes = len(VOC_CLASSES) + 1 # +1 background
-#     # model.init_model()
-#     print('Finished loading model!')
-#     # load data
-#     dataset = VOCDetection(args.voc_root, [('2007', set_type)], BaseTransform(300, dataset_mean), AnnotationTransform())
-#     # evaluation
-#     print(dataset.samples[3])
-#     test_net(args.eval_save_folder, model.net, args.cuda, dataset,
-#              BaseTransform(300, dataset_mean), args.top_k, 300,
-#              thresh=args.confidence_threshold)

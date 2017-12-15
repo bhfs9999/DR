@@ -8,7 +8,7 @@ from data.retinal_data import dname2label
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
-class BaseOptions(object):
+class DetOptions(object):
     def __init__(self):
         self.parser = argparse.ArgumentParser()
         self.initialized = False
@@ -54,16 +54,16 @@ class BaseOptions(object):
         # eval
         self.parser.add_argument('--trained_model', type=str, help='the path of trained model')
         self.parser.add_argument('--conf_th', default=0.01, type=float, help='the path of trained model')
-        self.parser.add_argument('--eval_save_folder', default='eval/', type=str,
-                                 help='File path to save results')
-        self.parser.add_argument('--confidence_threshold', default=0.01, type=float,
-                                 help='Detection confidence threshold')
         self.parser.add_argument('--top_k', default=5, type=int,
                                  help='Further restrict the number of predictions to parse')
+        self.parser.add_argument('--plot_which', type=str, default='all', choices=['all', 'MA', 'BP'],
+                                 help='choose which lesion to visualize')
 
         # voc
         self.parser.add_argument('--voc_root', default='/home/xav/data/VOCdevkit', help='Location of VOC root directory')
         self.parser.add_argument('--voc', default=False, type=str2bool, help='whether to use voc')
+        self.parser.add_argument('--voc_eval_save_folder', default='eval/', type=str,
+                                 help='File path to save results')
 
     def parse(self):
         if not self.initialized:
@@ -89,10 +89,22 @@ class BaseOptions(object):
             if not os.path.exists(self.opt.save_folder):
                 os.mkdir(self.opt.save_folder)
 
+            # mk log save path
             model_save_path = os.path.join(self.opt.save_folder, self.opt.exp_name)
             print('model save path: ', model_save_path)
             if not os.path.exists(model_save_path):
                 os.mkdir(model_save_path)
+
+            # save option log at model save path
+            option_fpath = os.path.join(model_save_path, 'options.log')
+            with open(option_fpath, 'w') as f:
+                args = vars(self.opt)
+                for k, v in sorted(args.items()):
+                    f.write("%s: %s\n" % (str(k), str(v)))
+
+            # mkdir log_dir
+            if not os.path.exists('runs'):
+                os.mkdir('runs')
 
             log_path = os.path.join('runs', self.opt.exp_name)
             print('log path: ',log_path)

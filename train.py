@@ -4,7 +4,7 @@ import torch.utils.data as data
 from data import v2, v1, AnnotationTransform, VOCDetection, detection_collate, VOCroot, VOC_CLASSES
 from utils.augmentations import SSDAugmentation, BaseTransform
 from model.base_model import DetModel
-from options.base_options import BaseOptions
+from options.base_options import DetOptions
 from tensorboardX import SummaryWriter
 import os
 from data.retinal_data import DetectionDataset
@@ -12,10 +12,9 @@ from data.retinal_data import DetectionDataset
 
 if __name__ == '__main__':
     # train_sets = [('2007', 'trainval')]
-    options = BaseOptions()
+    options = DetOptions()
     args = options.parse()
     options.setup_option()
-
     writer = SummaryWriter(os.path.join('runs', args.exp_name+'_train'))
 
     # dataset
@@ -48,8 +47,8 @@ if __name__ == '__main__':
         print('val dataset len: {}'.format(len(dataset_val)))
 
     model = DetModel(args)
-    model.init_model()
-    for i in range(args.max_epochs):
+    begin_epoch = model.init_model()
+    for i in range(begin_epoch, begin_epoch+args.max_epochs):
         print('\nepoch: {}'.format(i))
         model.train(dataloader_train, i, writer)
 

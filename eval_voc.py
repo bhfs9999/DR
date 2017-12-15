@@ -358,7 +358,7 @@ cachedir: Directory for caching the annotations
 
 
 def test_net(save_folder, net, cuda, dataset, transform, top_k,
-             im_size=300, thresh=0.05):
+             im_size=300, thresh=0.01):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(dataset)
     num_images = 10
@@ -434,6 +434,5 @@ if __name__ == '__main__':
     # load data
     dataset = VOCDetection(args.voc_root, [('2007', set_type)], BaseTransform(300, dataset_mean), AnnotationTransform())
     # evaluation
-    test_net(args.eval_save_folder, model.net, args.cuda, dataset,
-             BaseTransform(300, dataset_mean), args.top_k, 300,
-             thresh=args.confidence_threshold)
+    test_net(args.voc_eval_save_folder, model.net, args.cuda, dataset,
+             BaseTransform(300, dataset_mean), args.top_k, 300,)
