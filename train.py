@@ -16,7 +16,7 @@ if __name__ == '__main__':
     args = options.parse()
     options.setup_option()
 
-    writer = SummaryWriter()
+    writer = SummaryWriter(os.path.join('runs', args.exp_name+'_train'))
 
     # dataset
     if args.voc:
@@ -56,8 +56,8 @@ if __name__ == '__main__':
         if not args.voc:
             model.val(dataloader_val, i, writer)
         #
-        if i % args.save_freq == 0:
-            model.save_network(model.net, 'single_feature', epoch=i, )
+        if (i+1) % args.save_freq == 0:
+            model.save_network(model.net, 'single_feature', epoch=i+1, )
             print('saving in epoch {}'.format(i))
 
     # writer.eport_scalars_to_json("./all_scalars.json")

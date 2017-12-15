@@ -235,7 +235,6 @@ class DetModel(BaseModel):
                 image   = vutils.make_grid([image])
                 writer.add_image('Image_{}'.format(i), image, 0)
 
-
             print('im_detect: {:d}/{:d}'.format(i + 1, num_images,))
 
         if get_mAP:

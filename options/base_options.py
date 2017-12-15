@@ -90,6 +90,11 @@ class BaseOptions(object):
                 os.mkdir(self.opt.save_folder)
 
             model_save_path = os.path.join(self.opt.save_folder, self.opt.exp_name)
-            print('model save path:', model_save_path)
+            print('model save path: ', model_save_path)
             if not os.path.exists(model_save_path):
                 os.mkdir(model_save_path)
+
+            log_path = os.path.join('runs', self.opt.exp_name)
+            print('log path: ',log_path)
+            if not os.path.exists(log_path):
+                os.mkdir(log_path)
