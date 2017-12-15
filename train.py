@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
         all_idxes  = set(existed_imgs).intersection(set(existed_xmls))
         all_xmlfnames = [idx+'_lable.xml' for idx in all_idxes]
-        sorted(all_xmlfnames)
+        all_xmlfnames = sorted(all_xmlfnames)
         n_data       = len(all_xmlfnames)
         train_fnames = all_xmlfnames[:int(n_data*0.8)]
         val_fnames   = all_xmlfnames[int(n_data*0.8):]

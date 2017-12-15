@@ -40,7 +40,8 @@ class DetectionDataset(data.Dataset):
         labels += filled_labels
         labels = np.array(labels)
 
-        # TODO: clamp bbox
+        # clip bbox
+        np.clip(labels, 0., 1., out=labels)
 
         # data aug
         if self.transform is not None:
@@ -109,9 +110,11 @@ class DetectionDataset(data.Dataset):
             if this_label[-1] == label[-1]:
                 continue
             xmin, ymin, xmax, ymax = label[:4]
+            x_center = (xmax - xmin) / 2
+            y_center = (ymax - ymin) / 2
 
-            if xmin > coord_crop[0] and ymin > coord_crop[1] \
-                and xmax < coord_crop[2] and ymax < coord_crop[3]:
+            if x_center > coord_crop[0] and y_center > coord_crop[1] \
+                and x_center < coord_crop[2] and y_center < coord_crop[3]:
                 new_bbox = change_coord([xmin, ymin, xmax, ymax], coord_crop)
                 new_label = list(new_bbox) + list(label[-2:])
                 filled_labels.append(new_label)
