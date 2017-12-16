@@ -4,6 +4,7 @@ import os
 from data import VOCroot
 import torch.backends.cudnn as cudnn
 from data.retinal_data import dname2label
+from data.prior_box import *
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -23,9 +24,13 @@ class DetOptions(object):
         self.parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
         self.parser.add_argument('--save_folder', default='weights/', help='Location to save checkpoint models')
         self.parser.add_argument('--log_params', default=False, type=str2bool, help='Whether to log params')
-        self.parser.add_argument('--img_root', default='../data/3', type=str, help='img root')
+        self.parser.add_argument('--img_root', default='../data/3/images', type=str, help='img root')
         self.parser.add_argument('--xml_root', default='../data/newxml', type=str, help='xml_root')
         self.parser.add_argument('--debug', default=False, type=str2bool, help='Whether to debug')
+        self.parser.add_argument('--train_path', default='/home/xav/project/DR/data/3/train.csv', type=str, help='train fname')
+        self.parser.add_argument('--val_path', default='/home/xav/project/DR/data/3/val.csv', type=str, help='val fname')
+        self.parser.add_argument('--eval_path', default='/home/xav/project/DR/data/3/test.csv', type=str, help='test fname')
+
 
         # train opt
         self.parser.add_argument('--max_epochs', default=40, type=int, help='Number of training iterations')
@@ -98,6 +103,12 @@ class DetOptions(object):
             # save option log at model save path
             option_fpath = os.path.join(model_save_path, 'options.log')
             with open(option_fpath, 'w') as f:
+
+                model_name = self.opt.model_name.lower()
+                hyper_param = eval(model_name+'_config')
+                for k, v in sorted(hyper_param.items()):
+                    f.write("%s: %s\n" % (str(k), str(v)))
+
                 args = vars(self.opt)
                 for k, v in sorted(args.items()):
                     f.write("%s: %s\n" % (str(k), str(v)))

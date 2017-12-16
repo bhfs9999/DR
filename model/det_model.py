@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from data.prior_box import vgg_stride16_config, PriorBox
+from data.prior_box import vggstride16_config, PriorBox
 from layers.functions import Detect
 
 
@@ -11,10 +11,10 @@ class VggStride16(nn.Module):
         super(VggStride16, self).__init__()
         self.phase       = args.phase
         self.num_classes = args.num_classes
-        self.priors      = Variable(PriorBox(vgg_stride16_config).forward(), volatile=True)
+        self.priors      = Variable(PriorBox(vggstride16_config).forward(), volatile=True)
         self.crop_size   = args.crop_size
         self.vgg         = nn.ModuleList(vgg(base[self.crop_size], 3,))
-        self.n_anchor    = len(vgg_stride16_config['scales']) * (len(vgg_stride16_config['aspect_ratios'][0]*2) + 1)
+        self.n_anchor    = len(vggstride16_config['scales']) * (len(vggstride16_config['aspect_ratios'][0] * 2) + 1)
 
         self.loc_layers  = nn.Conv2d(self.vgg[-2].out_channels,
                                      self.n_anchor * 4, kernel_size=3, padding=1)

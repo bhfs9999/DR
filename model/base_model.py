@@ -42,8 +42,9 @@ class BaseModel(object):
             net_state_dict = load_dict['net_state_dict']
             net.load_state_dict(net_state_dict)
             epoch = load_dict['epoch']
+            # net.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
             print('Finished!')
-            return epoch
+            # return epoch
         else:
             print('Sorry only .pth and .pkl files supported.')
 

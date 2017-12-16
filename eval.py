@@ -6,7 +6,7 @@ from options.base_options import DetOptions
 from tensorboardX import SummaryWriter
 import os
 from data.retinal_data import DetectionDataset
-
+from utils import read_fname
 
 if __name__ == '__main__':
     # train_sets = [('2007', 'trainval')]
@@ -17,14 +17,21 @@ if __name__ == '__main__':
     writer = SummaryWriter(comment=args.exp_name+'_eval')
 
     # dataset
-    existed_imgs = [fname.split('.')[0] for fname in os.listdir(args.img_root)]
-    existed_xmls = [fname.split('_')[0] for fname in os.listdir(args.xml_root)]
+    # existed_imgs = [fname.split('.')[0] for fname in os.listdir(args.img_root)]
+    # existed_xmls = [fname.split('_')[0] for fname in os.listdir(args.xml_root)]
+    #
+    # all_idxes  = set(existed_imgs).intersection(set(existed_xmls))
+    # all_xmlfnames = [idx+'_label.xml' for idx in all_idxes]
+    # all_xmlfnames = sorted(all_xmlfnames)
+    # n_data       = len(all_xmlfnames)
+    #
+    # eval_fnames   = all_xmlfnames[int(n_data*0.8):][:100]
 
-    all_idxes  = set(existed_imgs).intersection(set(existed_xmls))
-    all_xmlfnames = [idx+'_lable.xml' for idx in all_idxes]
-    all_xmlfnames = sorted(all_xmlfnames)
-    n_data       = len(all_xmlfnames)
-    eval_fnames   = all_xmlfnames[int(n_data*0.8):][:3]
+
+    eval_fnames   = [idx.split('.')[0]+'_label.xml' for idx in read_fname(args.eval_path)]
+    all_xml      = os.listdir('/home/xav/project/DR/data/newxml/')
+    eval_fnames   = list(set(eval_fnames).intersection(set(all_xml)))
+
     print('eval_fnames len: {}'.format(len(eval_fnames)))
 
     # args.means = [0, 0, 0]
@@ -39,7 +46,7 @@ if __name__ == '__main__':
     model.init_model()
     # model.load_weights()
 
-    model.eval(dataset_eval, writer)
+    model.eval(dataset_eval, writer, plot_which=args.plot_which)
 
     # writer.eport_scalars_to_json("./all_scalars.json")
     writer.close()

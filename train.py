@@ -8,6 +8,7 @@ from options.base_options import DetOptions
 from tensorboardX import SummaryWriter
 import os
 from data.retinal_data import DetectionDataset
+from utils import read_fname
 
 
 if __name__ == '__main__':
@@ -26,15 +27,12 @@ if __name__ == '__main__':
         data_loader = data.DataLoader(dataset, args.batch_size, num_workers=args.num_workers,
                                       shuffle=True, collate_fn=detection_collate, pin_memory=True)
     else:
-        existed_imgs = [fname.split('.')[0] for fname in os.listdir(args.img_root)]
-        existed_xmls = [fname.split('_')[0] for fname in os.listdir(args.xml_root)]
+        train_fnames = [idx.split('.')[0]+'_label.xml' for idx in read_fname(args.train_path)]
+        val_fnames   = [idx.split('.')[0]+'_label.xml' for idx in read_fname(args.val_path)]
+        all_xml      = os.listdir('/home/xav/project/DR/data/newxml/')
+        train_fnames = list(set(train_fnames).intersection(set(all_xml)))
+        val_fnames   = list(set(val_fnames).intersection(set(all_xml)))
 
-        all_idxes  = set(existed_imgs).intersection(set(existed_xmls))
-        all_xmlfnames = [idx+'_lable.xml' for idx in all_idxes]
-        all_xmlfnames = sorted(all_xmlfnames)
-        n_data       = len(all_xmlfnames)
-        train_fnames = all_xmlfnames[:int(n_data*0.8)]
-        val_fnames   = all_xmlfnames[int(n_data*0.8):]
         dataset_train = DetectionDataset(args.img_root, args.xml_root, train_fnames, args.crop_size, args.shift_rate,
                                          args.pad_value, BaseTransform(args.input_size, args.means), )#SSDAugmentation(args.input_size, args.means))
         dataloader_train = data.DataLoader(dataset_train, args.batch_size, num_workers=args.num_workers,

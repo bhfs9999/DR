@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from data.prior_box import vgg_stride16_config
+from data.prior_box import vggstride16_config
 from ..box_utils import match, log_sum_exp
 
 class MultiBoxLoss(nn.Module):
@@ -41,7 +41,7 @@ class MultiBoxLoss(nn.Module):
         self.do_neg_mining = neg_mining
         self.negpos_ratio = neg_pos
         self.neg_overlap = neg_overlap
-        self.variance = vgg_stride16_config['variance']
+        self.variance = vggstride16_config['variance']
 
     def forward(self, predictions, targets):
         """Multibox Loss
