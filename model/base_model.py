@@ -51,7 +51,7 @@ class BaseModel(object):
     def save_network(self, net, net_name, epoch, label=''):
         save_fname  = '%s_%s_%s.pth' % (epoch, net_name, label)
         save_path   = os.path.join(self.args.save_folder, self.args.exp_name, save_fname)
-        save_dict = {'net_state_dict': net.state_dict, 'exp_name': self.args.exp_name, 'epoch': epoch}
+        save_dict = {'net_state_dict': net.state_dict(), 'exp_name': self.args.exp_name, 'epoch': epoch}
         torch.save(save_dict, save_path)
 
     def _adjust_learning_rate(self, epoch):

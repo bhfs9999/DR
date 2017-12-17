@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
         if not args.voc:
             model.val(dataloader_val, i, writer)
-        #
+
         if (i+1) % args.save_freq == 0:
             model.save_network(model.net, 'single_feature', epoch=i+1, )
             print('saving in epoch {}'.format(i))
