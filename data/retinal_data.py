@@ -31,6 +31,8 @@ class DetectionDataset(data.Dataset):
 
         # crop image
         image, coord_crop, new_bbox = self.crop(image, label)
+        new_bbox = np.array(new_bbox)
+        np.clip(new_bbox, 0., 1., out=new_bbox)
         new_label = list(new_bbox) + list(label[-2:])
         labels.append(new_label)
 
@@ -39,9 +41,6 @@ class DetectionDataset(data.Dataset):
         filled_labels = self._fill_labels(coord_crop, all_label, label)
         labels += filled_labels
         labels = np.array(labels)
-
-        # clip bbox
-        np.clip(labels, 0., 1., out=labels)
 
         # data aug
         if self.transform is not None:
@@ -110,12 +109,16 @@ class DetectionDataset(data.Dataset):
             if this_label[-1] == label[-1]:
                 continue
             xmin, ymin, xmax, ymax = label[:4]
-            x_center = (xmax - xmin) / 2
-            y_center = (ymax - ymin) / 2
+            x_center = (xmax + xmin) / 2
+            y_center = (ymax + ymin) / 2
 
             if x_center > coord_crop[0] and y_center > coord_crop[1] \
                 and x_center < coord_crop[2] and y_center < coord_crop[3]:
                 new_bbox = change_coord([xmin, ymin, xmax, ymax], coord_crop)
+
+                # clip
+                new_bbox = np.array(new_bbox)
+                np.clip(new_bbox, 0., 1., new_bbox)
                 new_label = list(new_bbox) + list(label[-2:])
                 filled_labels.append(new_label)
         return filled_labels
