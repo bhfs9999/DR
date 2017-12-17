@@ -44,7 +44,7 @@ class BaseModel(object):
             epoch = load_dict['epoch']
             # net.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
             print('Finished!')
-            # return epoch
+            return epoch
         else:
             print('Sorry only .pth and .pkl files supported.')
 

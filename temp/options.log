@@ -1,0 +1,48 @@
+aspect_ratios: [[2]]
+clip: True
+feature_maps: [19]
+min_dim: 300
+name: vgg_stride16
+scales: [40, 70, 100, 140]
+steps: [16]
+variance: [0.1, 0.2]
+version: single_feature
+basenet: vgg16_reducedfc.pth
+batch_size: 16
+conf_th: 0.01
+crop_size: 300
+cuda: True
+debug: False
+eval_path: /home/xav/project/DR/data/3/test.csv
+exp_name: baseline_v0
+gamma: 0.1
+img_root: ../data/3/images
+input_size: 300
+jaccard_threshold: 0.5
+log_params: False
+lr: 0.0001
+max_epochs: 40
+means: (104, 117, 123)
+model_name: VggStride16
+momentum: 0.9
+num_classes: 3
+num_workers: 4
+pad_value: 0
+phase: train
+plot_which: all
+resume: None
+save_folder: weights/
+save_freq: 5
+shift_rate: 0.8
+start_iter: 0
+stepvalues: [10, 20, 30]
+top_k: 5
+train_path: /home/xav/project/DR/data/3/train.csv
+trained_model: None
+val_path: /home/xav/project/DR/data/3/val.csv
+version: single_feature
+voc: False
+voc_eval_save_folder: eval/
+voc_root: /home/xav/data/VOCdevkit
+weight_decay: 0.0005
+xml_root: ../data/newxml
