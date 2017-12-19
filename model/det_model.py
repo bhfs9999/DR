@@ -50,6 +50,40 @@ class VggStride16(nn.Module):
 
         return output
 
+class VggStride16_centerloss(VggStride16):
+    def __init__(self, args):
+        super(VggStride16_centerloss, self).__init__(args)
+        self.center_dim = args.center_dim
+        self.conv1 = nn.Conv2d(self.vgg[-2].out_channels,
+                               self.center_dim, kernel_size=1, padding=0)
+        self.register_buffer('centers', torch.zeros(self.num_classes, self.center_dim))
+
+    def foward(self, x):
+        for one_layer in self.vgg:
+            x = one_layer(x)
+
+        self.center_feature = x
+        # loc: bs x 19 x 19 x (6x4)
+        # cls: bs x 19 x 19 x (6xn_class)
+        loc = self.loc_layers(x).permute(0, 2, 3, 1).contiguous()
+        cls = self.cls_layers(x).permute(0, 2, 3, 1).contiguous()
+
+        output = (
+            loc.view(loc.size(0), -1, 4),
+            cls.view(cls.size(0), -1, self.num_classes),
+            self.priors
+        )
+
+        if self.phase == 'test':
+            detections = self.detect(
+                loc.view(loc.size(0), -1, 4),
+                self.softmax(cls.view(-1, self.num_classes)),
+                self.priors.type(type(x.data))
+            )
+            return output, detections
+
+        return output
+
 def vgg(cfg, i, batch_norm=False):
     layers = []
     in_channels = i
