@@ -6,8 +6,8 @@ import torch.optim as optim
 import torchvision.utils as vutils
 from torch.autograd import Variable
 from torchvision.transforms import ToTensor
-from .det_model import VggStride16
-from layers.modules import MultiBoxLoss
+from .det_model import VggStride16, VggStride16_centerloss
+from layers.modules import MultiBoxLoss, CenterLoss
 from utils.eval_DR import *
 from utils.plot import draw_bboxes_pre_label
 from utils.summary import *
@@ -78,7 +78,7 @@ class DetModel(BaseModel):
         self.lr_current = self.args.lr
         self.optimizer  = optim.SGD(self.net.parameters(), lr=args.lr,
                                     momentum=args.momentum, weight_decay=args.weight_decay)
-        self.criterion  = MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda)
+        self.criterion  = CenterLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda) # MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda)
         self.iter       = 0
 
     def init_model(self):
@@ -126,8 +126,22 @@ class DetModel(BaseModel):
 
             #backward
             self.optimizer.zero_grad()
-            loss_l, loss_c = self.criterion(out, targets)
-            loss = loss_c + loss_l
+
+            if self.args.center_loss:
+                loss_l, loss_c, target_fmap = self.criterion(out, targets)
+                center_loss, self.net._buffers['centers'] = self.criterion.get_center_loss(self.net._buffers['centers'],
+                                                                            self.net.center_feature,
+                                                                            target_fmap,
+                                                                            self.args.alpha,
+                                                                            self.args.num_classes
+                                                                            )
+
+
+                loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
+            else:
+                loss_l, loss_c, target_fmap = self.criterion(out, targets)
+                loss = loss_c + loss_l
+
             loss.backward()
             self.optimizer.step()
 
@@ -135,8 +149,8 @@ class DetModel(BaseModel):
             if self.iter % 10 == 0:
                 print('train loss: {:.4f} | n_iter: {} | time: {:.2f}'.format(loss.data[0], self.iter, time.time() - t2))
                 t3 = time.time()
-                scalars = [loss.data[0], loss_c.data[0], loss_l.data[0]]
-                names   = ['loss', 'loss_c', 'loss_l']
+                scalars = [loss.data[0], loss_c.data[0], loss_l.data[0], center_loss[0]]
+                names   = ['loss', 'loss_c', 'loss_l', 'center_loss']
                 write_scalars(writer, scalars, names, self.iter, tag='train_loss')
 
             self.iter += 1

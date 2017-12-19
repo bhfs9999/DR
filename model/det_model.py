@@ -28,7 +28,6 @@ class VggStride16(nn.Module):
     def forward(self, x):
         for one_layer in self.vgg:
             x = one_layer(x)
-
         # loc: bs x 19 x 19 x (6x4)
         # cls: bs x 19 x 19 x (6xn_class)
         loc = self.loc_layers(x).permute(0, 2, 3, 1).contiguous()
@@ -62,7 +61,9 @@ class VggStride16_centerloss(VggStride16):
         for one_layer in self.vgg:
             x = one_layer(x)
 
-        self.center_feature = x
+        # self.center_feature  bs x 512 x 19 x 19 -> bs 19 19 512
+        print('x size', x.size())
+        self.center_feature = self.conv1(x).permute(0, 2, 3, 1).contiguous().view(-1, self.center_dim)
         # loc: bs x 19 x 19 x (6x4)
         # cls: bs x 19 x 19 x (6xn_class)
         loc = self.loc_layers(x).permute(0, 2, 3, 1).contiguous()

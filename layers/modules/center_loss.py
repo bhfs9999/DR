@@ -5,7 +5,8 @@ from torch.autograd import Variable
 from data.prior_box import vggstride16_config
 from ..box_utils import match, log_sum_exp
 
-class MultiBoxLoss(nn.Module):
+
+class CenterLoss(nn.Module):
     """SSD Weighted Loss Function
     Compute Targets:
         1) Produce Confidence Target Indices by matching  ground truth boxes
@@ -102,7 +103,7 @@ class MultiBoxLoss(nn.Module):
         _, loss_idx = loss_c.sort(1, descending=True)
         _, idx_rank = loss_idx.sort(1)
         num_pos = pos.long().sum(1, keepdim=True)
-        num_neg = torch.clamp(self.negpos_ratio*num_pos, max=pos.size(1)-1)
+        num_neg = torch.clamp(self.negpos_ratio * num_pos, max=pos.size(1) - 1)
         neg = idx_rank < num_neg.expand_as(idx_rank)
 
         # Confidence Loss Including Positive and Negative Examples
@@ -110,16 +111,39 @@ class MultiBoxLoss(nn.Module):
         neg_idx = neg.unsqueeze(2).expand_as(conf_data)
 
         # print(pos_idx[0])       # 4332 3
-        conf_p = conf_data[(pos_idx+neg_idx).gt(0)].view(-1, self.num_classes)
-        targets_weighted = conf_t[(pos+neg).gt(0)]
+        conf_p = conf_data[(pos_idx + neg_idx).gt(0)].view(-1, self.num_classes)
+        targets_weighted = conf_t[(pos + neg).gt(0)]
         # print('conf_p size', conf_p.size(), 'targets_weighted size', targets_weighted.size())   #
         # print('conf_t size', conf_t.size(), torch.max(conf_t[0]))     # 16, 4332
         loss_c = F.cross_entropy(conf_p, targets_weighted, size_average=False)
-        # conf_t_featuremap = torch.max(conf_t.view(conf_t.size(0), 19, 19, 12), dim=3)[0].view(-1)
-        # print(conf_t_featuremap.size())
+
+        # TODO: conf_t back to bs x 19 x 19 x 12
+        # TODO: is it good to use max? some maybe 1 both 2
+        conf_t_featuremap = torch.max(conf_t.view(conf_t.size(0), 19, 19, 12), dim=3).view(-1)
         # Sum of losses: L(x,c,l,g) = (Lconf(x, c) + αLloc(x,l,g)) / N
 
         N = num_pos.data.sum()
         loss_l /= N
         loss_c /= N
-        return loss_l, loss_c
+        return loss_l, loss_c, conf_t_featuremap
+
+def get_center_loss(centers, features, target, alpha, num_classes):
+    batch_size = target.size(0)
+    features_dim = features.size(1)
+
+    target_expand = target.view(batch_size,1).expand(batch_size,features_dim)
+    centers_var = Variable(centers)
+    centers_batch = centers_var.gather(0,target_expand)
+    criterion = nn.MSELoss()
+    center_loss = criterion(features,  centers_batch)
+
+    diff = centers_batch - features
+    unique_label, unique_reverse, unique_count = np.unique(target.cpu().data.numpy(), return_inverse=True, return_counts=True)
+    appear_times = torch.from_numpy(unique_count).gather(0,torch.from_numpy(unique_reverse))
+    appear_times_expand = appear_times.view(-1,1).expand(batch_size,features_dim).type(torch.FloatTensor)
+    diff_cpu = diff.cpu().data / appear_times_expand.add(1e-6)
+    diff_cpu = alpha * diff_cpu
+    for i in range(batch_size):
+        centers[target.data[i]] -= diff_cpu[i].type(centers.type())
+
+    return center_loss, centers

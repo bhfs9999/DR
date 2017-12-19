@@ -69,6 +69,11 @@ class DetOptions(object):
         self.parser.add_argument('--voc_eval_save_folder', default='eval/', type=str,
                                  help='File path to save results')
 
+        # center loss
+        self.parser.add_argument('--center_loss', default=False, type=str2bool, help='Whether use center loss')
+        self.parser.add_argument('--alpha', default=1, type=float, help='center loss hp alpha')
+        self.parser.add_argument('--centerloss_weight', default=0.1, type=float, help='center loss hp weight')
+
     def parse(self):
         if not self.initialized:
             self.initialize()
