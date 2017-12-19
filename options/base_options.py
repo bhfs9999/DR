@@ -31,7 +31,6 @@ class DetOptions(object):
         self.parser.add_argument('--val_path', default='/home/xav/project/DR/data/3/val.csv', type=str, help='val fname')
         self.parser.add_argument('--eval_path', default='/home/xav/project/DR/data/3/test.csv', type=str, help='test fname')
 
-
         # train opt
         self.parser.add_argument('--max_epochs', default=40, type=int, help='Number of training iterations')
         self.parser.add_argument('--version', default='single_feature', help='conv11_2(v2) or pool6(v1) as last layer')

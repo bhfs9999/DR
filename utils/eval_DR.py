@@ -170,10 +170,10 @@ cachedir: Directory for caching the annotations
 # first load gt
     if not os.path.isdir(cachedir):
         os.mkdir(cachedir)
-    cachefile = os.path.join(cachedir, 'annots.pkl')
+    cachefile = os.path.join(os.getcwd(), cachedir, 'annots.pkl')
     print('cachefile', cachefile)
     # read list of images
-    imagenames = pickle.load(open(os.path.join(cachedir, 'ids.pkl'), 'rb'))
+    imagenames = pickle.load(open(os.path.join(os.getcwd(), cachedir, 'ids.pkl'), 'rb'))
 
     # load
     with open(cachefile, 'rb') as f:

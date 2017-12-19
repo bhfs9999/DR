@@ -38,10 +38,14 @@ class BaseModel(object):
         other, ext = os.path.splitext(base_file)
         if ext == '.pkl' or '.pth':
             print('Loading weights into state dict...')
+            # new version
             load_dict = torch.load(base_file, map_location=lambda storage, loc: storage)
             net_state_dict = load_dict['net_state_dict']
             net.load_state_dict(net_state_dict)
             epoch = load_dict['epoch']
+
+            # ori version
+            # epoch = 0
             # net.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
             print('Finished!')
             return epoch
@@ -248,8 +252,8 @@ class DetModel(BaseModel):
             print('im_detect: {:d}/{:d}'.format(i + 1, num_images,))
 
         if get_mAP:
-            pickle.dump(annots, open('annotations_cache/annots.pkl', 'wb'))
-            pickle.dump(ids, open('annotations_cache/ids.pkl', 'wb'))
+            pickle.dump(annots, open('./annotations_cache/annots.pkl', 'wb'))
+            pickle.dump(ids, open('./annotations_cache/ids.pkl', 'wb'))
             output_dir = get_output_dir('pr_result', self.args.exp_name)
             evaluate_detections(all_boxes, output_dir, dataset)
 

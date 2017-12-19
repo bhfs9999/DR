@@ -114,7 +114,7 @@ vggstride16_config = {
     'feature_maps'  : [19],
     'min_dim'       : 300,
     'steps'         : [16,],
-    'scales'        : [40, 70, 100, 140],
+    'scales'        : [60, 120, 180], # [40, 70, 100, 140] baseline_v1.2,
     'aspect_ratios' : [[2]],
     'variance'      : [0.1, 0.2],
     'clip'          : True,
