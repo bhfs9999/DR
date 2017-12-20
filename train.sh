@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-CUDA_VISIBLE_DEVICES=1 python train.py train centerloss_hem --center_loss True --model_name VggStride16_centerloss
+CUDA_VISIBLE_DEVICES=2 python train.py train debug_centerloss --center_loss True --model_name VggStride16_centerloss

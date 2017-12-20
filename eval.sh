@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-python eval.py test ori_train_data3_all_0 --trained_model 35_single_feature_.pth --conf_th 0.2
+CUDA_VISIBLE_DEVICES=2 python eval.py test centerloss_v0_ --trained_model 15_single_feature_.pth --conf_th 0.2

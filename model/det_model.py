@@ -61,7 +61,7 @@ class VggStride16_centerloss(VggStride16):
         for one_layer in self.vgg:
             x = one_layer(x)
 
-        # self.center_feature  bs x 512 x 19 x 19 -> bs 19 19 512
+        # self.center_feature  bs x 512 x 19 x 19 -> bs 19 19 512 -> (bs x 19 x 19) x 512
         self.center_feature = self.conv1(x).permute(0, 2, 3, 1).contiguous().view(-1, self.center_dim)
         # loc: bs x 19 x 19 x (6x4)
         # cls: bs x 19 x 19 x (6xn_class)

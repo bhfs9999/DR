@@ -41,9 +41,14 @@ class BaseModel(object):
             # new version
             load_dict = torch.load(base_file, map_location=lambda storage, loc: storage)
             net_state_dict = load_dict['net_state_dict']
+            # for name, value in net_state_dict.items():
+            #     print(name)
+            model_dict = net.state_dict()
+            net_state_dict = {k: v for k, v in net_state_dict.items() if k in model_dict}
+            model_dict.update(net_state_dict)
             net.load_state_dict(net_state_dict)
             epoch = load_dict['epoch']
-
+            # self.iter = load_dict['iter']
             # ori version
             # epoch = 0
             # net.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
@@ -55,7 +60,7 @@ class BaseModel(object):
     def save_network(self, net, net_name, epoch, label=''):
         save_fname  = '%s_%s_%s.pth' % (epoch, net_name, label)
         save_path   = os.path.join(self.args.save_folder, self.args.exp_name, save_fname)
-        save_dict = {'net_state_dict': net.state_dict(), 'exp_name': self.args.exp_name, 'epoch': epoch}
+        save_dict = {'net_state_dict': net.state_dict(), 'exp_name': self.args.exp_name, 'epoch': epoch, 'iter': self.iter}
         torch.save(save_dict, save_path)
 
     def _adjust_learning_rate(self, epoch):
@@ -182,12 +187,13 @@ class DetModel(BaseModel):
             out = self.net(images)
 
             if self.args.center_loss:
-                loss_l, loss_c, target_fmap = self.criterion(out, targets)
+                loss_l, loss_c, target_fmap, have_centerloss = self.criterion(out, targets)
                 center_loss, self.net._buffers['centers'] = self.criterion.get_center_loss(self.net._buffers['centers'],
                                                                                            self.net.center_feature,
                                                                                            target_fmap,
                                                                                            self.args.alpha,
-                                                                                           self.args.num_classes
+                                                                                           self.args.num_classes,
+                                                                                           have_centerloss
                                                                                            )
 
 
