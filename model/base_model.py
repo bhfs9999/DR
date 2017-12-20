@@ -128,12 +128,13 @@ class DetModel(BaseModel):
             self.optimizer.zero_grad()
 
             if self.args.center_loss:
-                loss_l, loss_c, target_fmap = self.criterion(out, targets)
+                loss_l, loss_c, target_fmap, have_centerloss = self.criterion(out, targets)
                 center_loss, self.net._buffers['centers'] = self.criterion.get_center_loss(self.net._buffers['centers'],
                                                                             self.net.center_feature,
                                                                             target_fmap,
                                                                             self.args.alpha,
-                                                                            self.args.num_classes
+                                                                            self.args.num_classes,
+                                                                            have_centerloss,
                                                                             )
 
 

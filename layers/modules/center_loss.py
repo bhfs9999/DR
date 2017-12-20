@@ -113,6 +113,10 @@ class CenterLoss(nn.Module):
         # print(pos_idx[0])       # 4332 3
         conf_p = conf_data[(pos_idx + neg_idx).gt(0)].view(-1, self.num_classes)
         targets_weighted = conf_t[(pos + neg).gt(0)]
+        # print('pos neg gt0 size', (pos+neg).gt(0).size(), (pos+neg).gt(0))   # bs x (19 x 19 x 9)
+        have_centerloss = torch.max((pos+neg).gt(0).view(conf_t.size(0), 19, 19, 9), dim=3)[0].view(-1)
+        # print('have_centerloss size', have_centerloss.size())
+
         # print('conf_p size', conf_p.size(), 'targets_weighted size', targets_weighted.size())   #
         # print('conf_t size', conf_t.size(), torch.max(conf_t[0]))     # 16, 4332
         loss_c = F.cross_entropy(conf_p, targets_weighted, size_average=False)
@@ -120,14 +124,15 @@ class CenterLoss(nn.Module):
         # TODO: is it good to use max? some maybe 1 both 2
         # print('conf_t size', conf_t.size())
         conf_t_featuremap = torch.max(conf_t.view(conf_t.size(0), 19, 19, 9), dim=3)[0].view(-1)
+        # print('conf_t_featuremap', conf_t_featuremap.size())
         # Sum of losses: L(x,c,l,g) = (Lconf(x, c) + αLloc(x,l,g)) / N
 
         N = num_pos.data.sum()
         loss_l /= N
         loss_c /= N
-        return loss_l, loss_c, conf_t_featuremap
+        return loss_l, loss_c, conf_t_featuremap, have_centerloss
 
-    def get_center_loss(self, centers, features, target, alpha, num_classes):
+    def get_center_loss(self, centers, features, target, alpha, num_classes, have_centerloss):
         '''
         :param centers: num_classes x dim_center
         :param features: (bs x ?) x dim_feature
@@ -136,6 +141,12 @@ class CenterLoss(nn.Module):
         :param num_classes:
         :return:
         '''
+        target = target[have_centerloss]
+        # print('target size, have_centerloss size', target.size(), have_centerloss.size())
+        hc_expand = have_centerloss.view(have_centerloss.size(0), 1).expand(have_centerloss.size(0), features.size(1))
+        # print('hc_expand size', hc_expand.size())
+        features = features[hc_expand].view(target.size(0), -1)
+        # print('target size, feature size', target.size(), features.size())
 
         batch_size = target.size(0)
         features_dim = features.size(1)
