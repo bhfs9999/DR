@@ -82,7 +82,7 @@ class CenterLoss(nn.Module):
         # print('conf_t', conf_t.size())     # 16 4332
         # pos mean object
         pos = conf_t > 0
-        num_pos = pos.sum(keepdim=True)
+        # num_pos = pos.sum(keepdim=True)
 
         # Localization Loss (Smooth L1)
         # Shape: [batch,num_priors,4]
@@ -117,7 +117,6 @@ class CenterLoss(nn.Module):
         # print('conf_t size', conf_t.size(), torch.max(conf_t[0]))     # 16, 4332
         loss_c = F.cross_entropy(conf_p, targets_weighted, size_average=False)
 
-        # TODO: conf_t back to bs x 19 x 19 x 12
         # TODO: is it good to use max? some maybe 1 both 2
         # print('conf_t size', conf_t.size())
         conf_t_featuremap = torch.max(conf_t.view(conf_t.size(0), 19, 19, 9), dim=3)[0].view(-1)
@@ -129,6 +128,15 @@ class CenterLoss(nn.Module):
         return loss_l, loss_c, conf_t_featuremap
 
     def get_center_loss(self, centers, features, target, alpha, num_classes):
+        '''
+        :param centers: num_classes x dim_center
+        :param features: (bs x ?) x dim_feature
+        :param target: (bs x ?)
+        :param alpha:
+        :param num_classes:
+        :return:
+        '''
+
         batch_size = target.size(0)
         features_dim = features.size(1)
 
