@@ -149,7 +149,7 @@ class DetModel(BaseModel):
             if self.iter % 10 == 0:
                 print('train loss: {:.4f} | n_iter: {} | time: {:.2f}'.format(loss.data[0], self.iter, time.time() - t2))
                 t3 = time.time()
-                scalars = [loss.data[0], loss_c.data[0], loss_l.data[0], center_loss[0]]
+                scalars = [loss.data[0], loss_c.data[0], loss_l.data[0], center_loss.data[0]]
                 names   = ['loss', 'loss_c', 'loss_l', 'center_loss']
                 write_scalars(writer, scalars, names, self.iter, tag='train_loss')
 
@@ -166,6 +166,7 @@ class DetModel(BaseModel):
         losses   = []
         losses_c = []
         losses_l = []
+        losses_center = []
         t1       = time.time()
         for images, targets in dataloader:
             if self.cuda:
@@ -178,21 +179,36 @@ class DetModel(BaseModel):
             # forward
             # out, detections = self.net(images)
             out = self.net(images)
-            loss_l, loss_c = self.criterion(out, targets)
-            loss = loss_c + loss_l
+
+            if self.args.center_loss:
+                loss_l, loss_c, target_fmap = self.criterion(out, targets)
+                center_loss, self.net._buffers['centers'] = self.criterion.get_center_loss(self.net._buffers['centers'],
+                                                                                           self.net.center_feature,
+                                                                                           target_fmap,
+                                                                                           self.args.alpha,
+                                                                                           self.args.num_classes
+                                                                                           )
+
+
+                loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
+            else:
+                loss_l, loss_c, target_fmap = self.criterion(out, targets)
+                loss = loss_c + loss_l
 
             losses.append(loss.data[0])
             losses_c.append(loss_c.data[0])
             losses_l.append(loss_l.data[0])
+            losses_center.append(center_loss.data[0])
 
         # log
         n = len(losses)
-        loss, loss_l, loss_c = sum(losses) / n, sum(losses_l) / n, sum(losses_c) / n
-        scalars = [loss, loss_c, loss_l]
-        names   = ['loss', 'loss_c', 'loss_l']
+        loss, loss_l, loss_c, loss_center = sum(losses) / n, sum(losses_l) / n, \
+                                            sum(losses_c) / n, sum(losses_center) / n
+        scalars = [loss, loss_c, loss_l, loss_center]
+        names   = ['loss', 'loss_c', 'loss_l', 'loss_center']
         write_scalars(writer, scalars, names, epoch, tag='val_loss')
-        print('epoch{} val finish, cost time {:.2f}, loss: {:.4f}, loss_l: {:.4f}, loss_c: {:.4f}'.format(epoch,
-                                                                            time.time()-t1, loss, loss_l, loss_c))
+        print('epoch{} val finish, cost time {:.2f}, loss: {:.4f}, loss_l: {:.4f}, loss_c: {:.4f}, loss_center: {:.4f}'.format(epoch,
+                                                                            time.time()-t1, loss, loss_l, loss_c, loss_center))
 
     def eval(self, dataset, writer, is_plot=True, is_save=False, get_mAP=True, plot_which='all'):
         assert self.net.phase == "test" and self.phase == "test", "phase should be test during eval"

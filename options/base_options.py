@@ -41,7 +41,7 @@ class DetOptions(object):
         self.parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
         self.parser.add_argument('--batch_size', default=16, type=int, help='Batch size for training')
         self.parser.add_argument('--jaccard_threshold', default=0.5, type=float, help='Min Jaccard index for matching')
-        self.parser.add_argument('--model_name', default='VggStride16', type=str, choices=['VggStride16'], help='model')
+        self.parser.add_argument('--model_name', default='VggStride16', type=str, choices=['VggStride16', 'VggStride16_centerloss'], help='model')
         self.parser.add_argument('--basenet', default='vgg16_reducedfc.pth', help='pretrained base model')
         self.parser.add_argument('--save_freq', default=5, type=int, help='save weights every # epochs')
 
@@ -73,6 +73,7 @@ class DetOptions(object):
         self.parser.add_argument('--center_loss', default=False, type=str2bool, help='Whether use center loss')
         self.parser.add_argument('--alpha', default=1, type=float, help='center loss hp alpha')
         self.parser.add_argument('--centerloss_weight', default=0.1, type=float, help='center loss hp weight')
+        self.parser.add_argument('--center_dim', default=128, type=int, help='center loss hp center dim')
 
     def parse(self):
         if not self.initialized:

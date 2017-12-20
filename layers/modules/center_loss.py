@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from data.prior_box import vggstride16_config
 from ..box_utils import match, log_sum_exp
-
+import numpy as np
 
 class CenterLoss(nn.Module):
     """SSD Weighted Loss Function
@@ -32,7 +32,7 @@ class CenterLoss(nn.Module):
     def __init__(self, num_classes, overlap_thresh, prior_for_matching,
                  bkg_label, neg_mining, neg_pos, neg_overlap, encode_target,
                  use_gpu=True):
-        super(MultiBoxLoss, self).__init__()
+        super(CenterLoss, self).__init__()
         self.use_gpu = use_gpu
         self.num_classes = num_classes
         self.threshold = overlap_thresh
@@ -119,7 +119,8 @@ class CenterLoss(nn.Module):
 
         # TODO: conf_t back to bs x 19 x 19 x 12
         # TODO: is it good to use max? some maybe 1 both 2
-        conf_t_featuremap = torch.max(conf_t.view(conf_t.size(0), 19, 19, 12), dim=3).view(-1)
+        # print('conf_t size', conf_t.size())
+        conf_t_featuremap = torch.max(conf_t.view(conf_t.size(0), 19, 19, 9), dim=3)[0].view(-1)
         # Sum of losses: L(x,c,l,g) = (Lconf(x, c) + αLloc(x,l,g)) / N
 
         N = num_pos.data.sum()
@@ -127,23 +128,23 @@ class CenterLoss(nn.Module):
         loss_c /= N
         return loss_l, loss_c, conf_t_featuremap
 
-def get_center_loss(centers, features, target, alpha, num_classes):
-    batch_size = target.size(0)
-    features_dim = features.size(1)
+    def get_center_loss(self, centers, features, target, alpha, num_classes):
+        batch_size = target.size(0)
+        features_dim = features.size(1)
 
-    target_expand = target.view(batch_size,1).expand(batch_size,features_dim)
-    centers_var = Variable(centers)
-    centers_batch = centers_var.gather(0,target_expand)
-    criterion = nn.MSELoss()
-    center_loss = criterion(features,  centers_batch)
+        target_expand = target.view(batch_size,1).expand(batch_size,features_dim)
+        centers_var = Variable(centers)
+        centers_batch = centers_var.gather(0,target_expand)
+        criterion = nn.MSELoss()
+        center_loss = criterion(features,  centers_batch)
 
-    diff = centers_batch - features
-    unique_label, unique_reverse, unique_count = np.unique(target.cpu().data.numpy(), return_inverse=True, return_counts=True)
-    appear_times = torch.from_numpy(unique_count).gather(0,torch.from_numpy(unique_reverse))
-    appear_times_expand = appear_times.view(-1,1).expand(batch_size,features_dim).type(torch.FloatTensor)
-    diff_cpu = diff.cpu().data / appear_times_expand.add(1e-6)
-    diff_cpu = alpha * diff_cpu
-    for i in range(batch_size):
-        centers[target.data[i]] -= diff_cpu[i].type(centers.type())
+        diff = centers_batch - features
+        unique_label, unique_reverse, unique_count = np.unique(target.cpu().data.numpy(), return_inverse=True, return_counts=True)
+        appear_times = torch.from_numpy(unique_count).gather(0,torch.from_numpy(unique_reverse))
+        appear_times_expand = appear_times.view(-1,1).expand(batch_size,features_dim).type(torch.FloatTensor)
+        diff_cpu = diff.cpu().data / appear_times_expand.add(1e-6)
+        diff_cpu = alpha * diff_cpu
+        for i in range(batch_size):
+            centers[target.data[i]] -= diff_cpu[i].type(centers.type())
 
-    return center_loss, centers
+        return center_loss, centers

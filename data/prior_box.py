@@ -121,3 +121,5 @@ vggstride16_config = {
     'name'          : 'vgg_stride16',
     'version'       : 'single_feature'
 }
+
+vggstride16_centerloss_config = vggstride16_config

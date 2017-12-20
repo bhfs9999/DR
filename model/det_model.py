@@ -57,12 +57,11 @@ class VggStride16_centerloss(VggStride16):
                                self.center_dim, kernel_size=1, padding=0)
         self.register_buffer('centers', torch.zeros(self.num_classes, self.center_dim))
 
-    def foward(self, x):
+    def forward(self, x):
         for one_layer in self.vgg:
             x = one_layer(x)
 
         # self.center_feature  bs x 512 x 19 x 19 -> bs 19 19 512
-        print('x size', x.size())
         self.center_feature = self.conv1(x).permute(0, 2, 3, 1).contiguous().view(-1, self.center_dim)
         # loc: bs x 19 x 19 x (6x4)
         # cls: bs x 19 x 19 x (6xn_class)
