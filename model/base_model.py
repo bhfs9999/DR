@@ -49,7 +49,7 @@ class BaseModel(object):
             model_dict.update(net_state_dict)
             net.load_state_dict(net_state_dict)
             epoch = load_dict['epoch']
-            # self.iter = load_dict['iter']
+            self.iter = load_dict['iter']
             # ori version
             # epoch = 0
             # net.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
