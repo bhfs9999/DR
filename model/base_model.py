@@ -130,6 +130,8 @@ class DetModel(BaseModel):
                 targets = [Variable(anno, volatile=True) for anno in targets]
 
             if self.args.debug:
+                # plot
+                print('targets', targets[0].data[0])
                 if self.iter == 20:
                     return
                 print('\n=============iter: ', self.iter)
@@ -139,23 +141,14 @@ class DetModel(BaseModel):
                 gt_bbox = gt[:, :4]
                 cls = gt[:, 4] + 1
                 image = images.squeeze(0).cpu().data.numpy()
-                image = draw_bboxes_pre_label(image, None, gt, labels=cls, means=self.args.means )
-                # print(image.shape)
+                image = draw_bboxes_pre_label(image, None, gt_bbox, labels=cls, means=self.args.means )
 
                 image = ToTensor()(image)
                 image = vutils.make_grid([image])
                 writer.add_image('Image_{}'.format(self.iter), image)
+                # write_hist_parameters(writer, self.net.conv1, self.iter)
+            # print('conv1 weight', self.net.conv1.weight)
 
-                # image   = x.cpu().data.numpy()[0]
-                # gt_bbox = gt[:, :4]
-                # gt_cls  = gt[:, 4] + 1 # 0 is bg
-                # image   = draw_bboxes_pre_label(image, bboxes_pred, gt_bbox, self.args.means, scores_pred, classes_pred,
-                #                                 gt_cls)
-                # image   = ToTensor()(image)
-                # image   = vutils.make_grid([image])
-                # writer.add_image('Image_{}'.format(i), image, 0)
-
-            print('targets', targets[0].data[0])
             # forward
             out = self.net(images)
 
@@ -171,7 +164,6 @@ class DetModel(BaseModel):
                                                                             self.args.num_classes,
                                                                             have_centerloss,
                                                                             )
-
 
                 loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
                 loss.backward()
@@ -274,7 +266,7 @@ class DetModel(BaseModel):
                 objects.append({'bbox':object[:4], 'name':idx2name[object[4]], 'difficult':0})
             annots[id] = objects
             gts.append(gt)
-            x = Variable(im.unsqueeze(0))
+            x = Variable(im.unsqueeze(0), volatile=True)
             if self.cuda:
                 x = x.cuda()
 

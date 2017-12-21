@@ -118,7 +118,7 @@ class CenterLoss(nn.Module):
         have_centerloss = torch.max((pos+neg).gt(0).view(conf_t.size(0), 19, 19, n_anchos), dim=3)[0].view(-1)
         # print('have_centerloss size', have_centerloss.size())
         # TODO: so many bounder is 1, big bug, maybe neg? why most neg is bounder
-        print('have_centerloss',torch.max((pos+neg).gt(0).view(conf_t.size(0), 19, 19, n_anchos), dim=3)[0][0])
+        # print('have_centerloss',torch.max((pos+neg).gt(0).view(conf_t.size(0), 19, 19, n_anchos), dim=3)[0][0])
         # print('conf_p size', conf_p.size(), 'targets_weighted size', targets_weighted.size())   # pos and neg (after hem)
         # print('conf_t size', conf_t.size(), torch.max(conf_t[0]))     # 16, 4332
         loss_c = F.cross_entropy(conf_p, targets_weighted, size_average=False)
