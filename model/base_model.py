@@ -7,11 +7,12 @@ import torchvision.utils as vutils
 from torch.autograd import Variable
 from torchvision.transforms import ToTensor
 from .det_model import VggStride16, VggStride16_centerloss
-from layers.modules import MultiBoxLoss, CenterLoss
+# from layers.modules import MultiBoxLoss, CenterLoss
 from utils.eval_DR import *
 from utils.plot import draw_bboxes_pre_label
 from utils.summary import *
-
+import layers.modules as loss
+# import model.det_model as basenet
 
 def xavier(param):
     init.xavier_uniform(param)
@@ -48,7 +49,7 @@ class BaseModel(object):
             model_dict.update(net_state_dict)
             net.load_state_dict(net_state_dict)
             epoch = load_dict['epoch']
-            self.iter = load_dict['iter']
+            # self.iter = load_dict['iter']
             # ori version
             # epoch = 0
             # net.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
@@ -84,15 +85,16 @@ class DetModel(BaseModel):
         self.optimizer  = optim.SGD(self.net.parameters(), lr=args.lr,
                                     momentum=args.momentum, weight_decay=args.weight_decay)
         # TODO: more general
-        self.criterion  = CenterLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda) # MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda)
+        self.criterion  = getattr(loss, args.loss.lower())(args)# CenterLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda) # MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda)
         self.iter       = 0
 
     def init_model(self):
         self.net.apply(weights_init)
         epoch = 0
         if self.args.resume and self.phase == 'train':
-            print('Resuming training, loading {}...'.format(self.args.resume))
-            epoch = self.load_weights(self.net, self.args.resume)
+            resume_path = os.path.join(self.args.save_folder, self.args.exp_name, self.args.resume)
+            print('Resuming training, loading {}...'.format(resume_path))
+            epoch = self.load_weights(self.net, resume_path)
         elif self.phase == 'train':
             vgg_weights = torch.load(self.args.save_folder + self.args.basenet)
             print('Loading base network...')
@@ -127,13 +129,40 @@ class DetModel(BaseModel):
                 images  = Variable(images)
                 targets = [Variable(anno, volatile=True) for anno in targets]
 
+            if self.args.debug:
+                if self.iter == 20:
+                    return
+                print('\n=============iter: ', self.iter)
+                # print(images.size(), images.squeeze(0).cpu().data.numpy().shape)
+                print(targets[0].size())
+                gt = targets[0].cpu().data.numpy()
+                gt_bbox = gt[:, :4]
+                cls = gt[:, 4] + 1
+                image = images.squeeze(0).cpu().data.numpy()
+                image = draw_bboxes_pre_label(image, None, gt, labels=cls, means=self.args.means )
+                # print(image.shape)
+
+                image = ToTensor()(image)
+                image = vutils.make_grid([image])
+                writer.add_image('Image_{}'.format(self.iter), image)
+
+                # image   = x.cpu().data.numpy()[0]
+                # gt_bbox = gt[:, :4]
+                # gt_cls  = gt[:, 4] + 1 # 0 is bg
+                # image   = draw_bboxes_pre_label(image, bboxes_pred, gt_bbox, self.args.means, scores_pred, classes_pred,
+                #                                 gt_cls)
+                # image   = ToTensor()(image)
+                # image   = vutils.make_grid([image])
+                # writer.add_image('Image_{}'.format(i), image, 0)
+
+            print('targets', targets[0].data[0])
             # forward
             out = self.net(images)
 
             #backward
             self.optimizer.zero_grad()
 
-            if self.args.center_loss:
+            if self.args.loss == 'CenterLoss':
                 loss_l, loss_c, target_fmap, have_centerloss = self.criterion(out, targets)
                 center_loss, self.net._buffers['centers'] = self.criterion.get_center_loss(self.net._buffers['centers'],
                                                                             self.net.center_feature,
@@ -145,20 +174,27 @@ class DetModel(BaseModel):
 
 
                 loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
+                loss.backward()
+                self.optimizer.step()
+                if self.iter % 10 == 0:
+                    print('train loss: {:.4f} | n_iter: {} | time: {:.2f}'.format(loss.data[0], self.iter, time.time() - t2))
+                    scalars = [loss.data[0], loss_c.data[0], loss_l.data[0], center_loss.data[0]]
+                    names   = ['loss', 'loss_c', 'loss_l', 'center_loss']
+                    write_scalars(writer, scalars, names, self.iter, tag='train_loss')
+
             else:
                 loss_l, loss_c, = self.criterion(out, targets)
                 loss = loss_c + loss_l
 
-            loss.backward()
-            self.optimizer.step()
+                loss.backward()
+                self.optimizer.step()
 
-            # log
-            if self.iter % 10 == 0:
-                print('train loss: {:.4f} | n_iter: {} | time: {:.2f}'.format(loss.data[0], self.iter, time.time() - t2))
-                t3 = time.time()
-                scalars = [loss.data[0], loss_c.data[0], loss_l.data[0], center_loss.data[0]]
-                names   = ['loss', 'loss_c', 'loss_l', 'center_loss']
-                write_scalars(writer, scalars, names, self.iter, tag='train_loss')
+                # log
+                if self.iter % 10 == 0:
+                    print('train loss: {:.4f} | n_iter: {} | time: {:.2f}'.format(loss.data[0], self.iter, time.time() - t2))
+                    scalars = [loss.data[0], loss_c.data[0], loss_l.data[0], ]
+                    names   = ['loss', 'loss_c', 'loss_l', ]
+                    write_scalars(writer, scalars, names, self.iter, tag='train_loss')
 
             self.iter += 1
 
@@ -184,10 +220,10 @@ class DetModel(BaseModel):
                 targets = [Variable(anno, volatile=True) for anno in targets]
 
             # forward
-            # out, detections = self.net(images)
+
             out = self.net(images)
 
-            if self.args.center_loss:
+            if self.args.loss == 'CenterLoss':
                 loss_l, loss_c, target_fmap, have_centerloss = self.criterion(out, targets)
                 center_loss, self.net._buffers['centers'] = self.criterion.get_center_loss(self.net._buffers['centers'],
                                                                                            self.net.center_feature,

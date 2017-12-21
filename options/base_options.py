@@ -30,6 +30,7 @@ class DetOptions(object):
         self.parser.add_argument('--train_path', default='/home/xav/project/DR/data/3/train.csv', type=str, help='train fname')
         self.parser.add_argument('--val_path', default='/home/xav/project/DR/data/3/val.csv', type=str, help='val fname')
         self.parser.add_argument('--eval_path', default='/home/xav/project/DR/data/3/test.csv', type=str, help='test fname')
+        self.parser.add_argument('--loss', default='MultiBoxLoss', choices=['MultiBoxLoss', 'CenterLoss'], type=str, help='choose loss')
 
         # train opt
         self.parser.add_argument('--max_epochs', default=40, type=int, help='Number of training iterations')
@@ -57,6 +58,7 @@ class DetOptions(object):
 
         # eval
         self.parser.add_argument('--trained_model', type=str, help='the path of trained model')
+        self.parser.add_argument('--comment', type=str, default='', help='plot comment')
         self.parser.add_argument('--conf_th', default=0.01, type=float, help='the path of trained model')
         self.parser.add_argument('--is_plot', default=False, type=str2bool, help='Whether use center loss')
         self.parser.add_argument('--top_k', default=5, type=int,

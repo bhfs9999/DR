@@ -15,10 +15,9 @@ if __name__ == '__main__':
     options.setup_option()
 
     if args.is_plot:
-        writer = SummaryWriter(comment=args.exp_name+'_eval')
+        writer = SummaryWriter(os.path.join('runs', args.exp_name+'_eval_'+args.comment))
     else:
         writer =None
-
     # dataset
     # existed_imgs = [fname.split('.')[0] for fname in os.listdir(args.img_root)]
     # existed_xmls = [fname.split('_')[0] for fname in os.listdir(args.xml_root)]
@@ -52,4 +51,7 @@ if __name__ == '__main__':
     model.eval(dataset_eval, writer, plot_which=args.plot_which, is_plot=args.is_plot)
 
     # writer.eport_scalars_to_json("./all_scalars.json")
+    print(111)
+    print('weight load from: ', args.trained_model)
+
     writer.close()

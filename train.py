@@ -46,10 +46,16 @@ if __name__ == '__main__':
 
     model = DetModel(args)
     begin_epoch = model.init_model()
+
+    if args.debug:
+        args.max_epochs = 1
+
     for i in range(begin_epoch, begin_epoch+args.max_epochs):
         print('\nepoch: {}'.format(i))
         model.train(dataloader_train, i, writer)
 
+        if args.debug:
+            break
         if not args.voc:
             model.val(dataloader_val, i, writer)
 

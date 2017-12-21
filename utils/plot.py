@@ -44,15 +44,18 @@ def draw_bboxes_pre_label(img, bboxes_pre, bboxes_label,
     else:
         img = img.copy()
     img = backtrans_mean(img, means).astype(np.uint8)
-    bboxes_pre = np.array(bboxes_pre.copy())
-    bboxes_label = np.array(bboxes_label.copy())
+
     if is_ratio:
         ratio_to_real(img, bboxes_pre)
         ratio_to_real(img, bboxes_label)
+    if bboxes_pre is not None:
+        bboxes_pre = np.array(bboxes_pre.copy())
+        img = draw_bboxes(img, bboxes_pre, 'r')
+    if bboxes_label is not None:
+        bboxes_label = np.array(bboxes_label.copy())
+        img = draw_bboxes(img, bboxes_label, 'g')
         # bboxes_pre   = ratio_to_real(img, bboxes_pre, CHW)
         # bboxes_label = ratio_to_real(img, bboxes_label, CHW)
-    img = draw_bboxes(img, bboxes_pre, 'r')
-    img = draw_bboxes(img, bboxes_label, 'g')
 
     if scores is not None and classes_pre is not None and len(scores) > 0 and len(classes_pre) > 0:
         texts = [str(classes_pre[i]) + ' : ' + str(round(scores[i], 3)) for i in range(len(classes_pre))]
@@ -63,6 +66,8 @@ def draw_bboxes_pre_label(img, bboxes_pre, bboxes_label,
 
 
 def ratio_to_real(img, bboxes):
+    if bboxes is None:
+        return
     if len(bboxes) == 0:
         return bboxes
     H, W, C = img.shape

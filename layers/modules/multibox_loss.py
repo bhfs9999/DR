@@ -81,7 +81,7 @@ class MultiBoxLoss(nn.Module):
         # print('conf_t', conf_t.size())     # 16 4332
         # pos mean object
         pos = conf_t > 0
-        num_pos = pos.sum(keepdim=True)
+        # num_pos = pos.sum(keepdim=True)
 
         # Localization Loss (Smooth L1)
         # Shape: [batch,num_priors,4]
@@ -114,6 +114,9 @@ class MultiBoxLoss(nn.Module):
         targets_weighted = conf_t[(pos+neg).gt(0)]
         # print('conf_p size', conf_p.size(), 'targets_weighted size', targets_weighted.size())   #
         # print('conf_t size', conf_t.size(), torch.max(conf_t[0]))     # 16, 4332
+
+        n_anchos = len(vggstride16_config['scales']) * (len(vggstride16_config['aspect_ratios'][0] * 2) + 1)
+        print('have_centerloss',torch.max((pos+neg).gt(0).view(conf_t.size(0), 19, 19, n_anchos), dim=3)[0][0])
         loss_c = F.cross_entropy(conf_p, targets_weighted, size_average=False)
         # conf_t_featuremap = torch.max(conf_t.view(conf_t.size(0), 19, 19, 12), dim=3)[0].view(-1)
         # print(conf_t_featuremap.size())
