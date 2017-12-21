@@ -58,6 +58,7 @@ class DetOptions(object):
         # eval
         self.parser.add_argument('--trained_model', type=str, help='the path of trained model')
         self.parser.add_argument('--conf_th', default=0.01, type=float, help='the path of trained model')
+        self.parser.add_argument('--is_plot', default=False, type=str2bool, help='Whether use center loss')
         self.parser.add_argument('--top_k', default=5, type=int,
                                  help='Further restrict the number of predictions to parse')
         self.parser.add_argument('--plot_which', type=str, default='all', choices=['all', 'MA', 'BP'],

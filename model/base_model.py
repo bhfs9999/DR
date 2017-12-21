@@ -48,7 +48,7 @@ class BaseModel(object):
             model_dict.update(net_state_dict)
             net.load_state_dict(net_state_dict)
             epoch = load_dict['epoch']
-            # self.iter = load_dict['iter']
+            self.iter = load_dict['iter']
             # ori version
             # epoch = 0
             # net.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
@@ -83,6 +83,7 @@ class DetModel(BaseModel):
         self.lr_current = self.args.lr
         self.optimizer  = optim.SGD(self.net.parameters(), lr=args.lr,
                                     momentum=args.momentum, weight_decay=args.weight_decay)
+        # TODO: more general
         self.criterion  = CenterLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda) # MultiBoxLoss(args.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.cuda)
         self.iter       = 0
 
@@ -145,7 +146,7 @@ class DetModel(BaseModel):
 
                 loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
             else:
-                loss_l, loss_c, target_fmap = self.criterion(out, targets)
+                loss_l, loss_c, = self.criterion(out, targets)
                 loss = loss_c + loss_l
 
             loss.backward()
@@ -199,7 +200,7 @@ class DetModel(BaseModel):
 
                 loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
             else:
-                loss_l, loss_c, target_fmap = self.criterion(out, targets)
+                loss_l, loss_c, = self.criterion(out, targets)
                 loss = loss_c + loss_l
 
             losses.append(loss.data[0])

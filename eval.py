@@ -14,7 +14,10 @@ if __name__ == '__main__':
     args = options.parse()
     options.setup_option()
 
-    writer = SummaryWriter(comment=args.exp_name+'_eval')
+    if args.is_plot:
+        writer = SummaryWriter(comment=args.exp_name+'_eval')
+    else:
+        writer =None
 
     # dataset
     # existed_imgs = [fname.split('.')[0] for fname in os.listdir(args.img_root)]
@@ -46,7 +49,7 @@ if __name__ == '__main__':
     model.init_model()
     # model.load_weights()
 
-    model.eval(dataset_eval, writer, plot_which=args.plot_which)
+    model.eval(dataset_eval, writer, plot_which=args.plot_which, is_plot=args.is_plot)
 
     # writer.eport_scalars_to_json("./all_scalars.json")
     writer.close()
