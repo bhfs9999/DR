@@ -5,6 +5,7 @@ from torch.autograd import Variable
 from data.prior_box import vggstride16_config
 from ..box_utils import match, log_sum_exp
 import numpy as np
+# from train import args
 
 class CenterLoss(nn.Module):
     """SSD Weighted Loss Function
@@ -31,7 +32,7 @@ class CenterLoss(nn.Module):
 
     def __init__(self, num_classes, overlap_thresh, prior_for_matching,
                  bkg_label, neg_mining, neg_pos, neg_overlap, encode_target,
-                 use_gpu=True):
+                 use_gpu=True, only_pos_centerloss=False):
         super(CenterLoss, self).__init__()
         self.use_gpu = use_gpu
         self.num_classes = num_classes
@@ -43,6 +44,7 @@ class CenterLoss(nn.Module):
         self.negpos_ratio = neg_pos
         self.neg_overlap = neg_overlap
         self.variance = vggstride16_config['variance']
+        self.only_pos_centerloss = only_pos_centerloss
 
     def forward(self, predictions, targets):
         """Multibox Loss
@@ -115,7 +117,10 @@ class CenterLoss(nn.Module):
         targets_weighted = conf_t[(pos + neg).gt(0)]
         # print('pos neg gt0 size', (pos+neg).gt(0).size(), (pos+neg).gt(0))   # bs x (19 x 19 x 9)
         n_anchos = len(vggstride16_config['scales']) * (len(vggstride16_config['aspect_ratios'][0] * 2) + 1)
-        have_centerloss = torch.max((pos+neg).gt(0).view(conf_t.size(0), 19, 19, n_anchos), dim=3)[0].view(-1)
+        if self.only_pos_centerloss:
+            have_centerloss = torch.max((pos).gt(0).view(conf_t.size(0), 19, 19, n_anchos), dim=3)[0].view(-1)
+        else:
+            have_centerloss = torch.max((pos+neg).gt(0).view(conf_t.size(0), 19, 19, n_anchos), dim=3)[0].view(-1)
         # print('have_centerloss size', have_centerloss.size())
         # TODO: so many bounder is 1, big bug, maybe neg? why most neg is bounder
         # print('have_centerloss',torch.max((pos+neg).gt(0).view(conf_t.size(0), 19, 19, n_anchos), dim=3)[0][0])
@@ -139,18 +144,24 @@ class CenterLoss(nn.Module):
     def get_center_loss(self, centers, features, target, alpha, num_classes, have_centerloss):
         '''
         :param centers: num_classes x dim_center
-        :param features: (bs x ?) x dim_feature
-        :param target: (bs x ?)
+        :param features: (bsx19x19) x dim_feature
+        :param target: (bsx19x19)
         :param alpha:
         :param num_classes:
         :return:
         '''
+        # have_centerloss bs'
+        # print('have_centerloss', have_centerloss)
+
+        # the order of target and have_centerloss is correct
+        # extract hc idx is correct
         target = target[have_centerloss]
-        # print('target size, have_centerloss size', target.size(), have_centerloss.size())
+        # print('target: ', target)
+        # print('target size, have_centerloss size', target.size(), have_centerloss.size())  # target len(hc)  ;  hc 19 x 19
         hc_expand = have_centerloss.view(have_centerloss.size(0), 1).expand(have_centerloss.size(0), features.size(1))
-        # print('hc_expand size', hc_expand.size())
+        # print('hc_expand size', hc_expand.size())    # (19x19) x dim_feature
         features = features[hc_expand].view(target.size(0), -1)
-        # print('target size, feature size', target.size(), features.size())
+        # print('target size, feature size', target.size(), features.size())    # len(hc) x dim_feature
 
         batch_size = target.size(0)
         features_dim = features.size(1)

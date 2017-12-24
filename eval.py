@@ -51,7 +51,6 @@ if __name__ == '__main__':
     model.eval(dataset_eval, writer, plot_which=args.plot_which, is_plot=args.is_plot)
 
     # writer.eport_scalars_to_json("./all_scalars.json")
-    print(111)
-    print('weight load from: ', args.trained_model)
+    print('weight load from: ', args.exp_name, args.trained_model)
 
     writer.close()

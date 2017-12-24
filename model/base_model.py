@@ -42,11 +42,9 @@ class BaseModel(object):
             # new version
             load_dict = torch.load(base_file, map_location=lambda storage, loc: storage)
             net_state_dict = load_dict['net_state_dict']
-            # for name, value in net_state_dict.items():
-            #     print(name)
-            model_dict = net.state_dict()
-            net_state_dict = {k: v for k, v in net_state_dict.items() if k in model_dict}
-            model_dict.update(net_state_dict)
+            # model_dict = net.state_dict()
+            # net_state_dict = {k: v for k, v in net_state_dict.items() if k in model_dict}
+            # model_dict.update(net_state_dict)
             net.load_state_dict(net_state_dict)
             epoch = load_dict['epoch']
             self.iter = load_dict['iter']

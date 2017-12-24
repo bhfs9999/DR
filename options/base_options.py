@@ -19,7 +19,7 @@ class DetOptions(object):
         self.parser.add_argument('phase', choices=['train', 'test'], help='choice train or test')
         self.parser.add_argument('exp_name', type=str, help='experiment name')
         self.parser.add_argument('--resume', default=None, type=str, help='Resume from checkpoint')
-        self.parser.add_argument('--num_workers', default=4, type=int, help='Number of workers used in dataloading')
+        self.parser.add_argument('--num_workers', default=5, type=int, help='Number of workers used in dataloading')
         self.parser.add_argument('--start_iter', default=0, type=int, help='Begin counting iterations starting from this value (should be used with resume)')
         self.parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
         self.parser.add_argument('--save_folder', default='weights/', help='Location to save checkpoint models')
@@ -73,10 +73,10 @@ class DetOptions(object):
                                  help='File path to save results')
 
         # center loss
-        self.parser.add_argument('--center_loss', default=False, type=str2bool, help='Whether use center loss')
         self.parser.add_argument('--alpha', default=1, type=float, help='center loss hp alpha')
         self.parser.add_argument('--centerloss_weight', default=0.1, type=float, help='center loss hp weight')
         self.parser.add_argument('--center_dim', default=128, type=int, help='center loss hp center dim')
+        self.parser.add_argument('--only_pos_centerloss', default=False, type=str2bool, help='Whether only use pos to center loss')
 
     def parse(self):
         if not self.initialized:
@@ -127,5 +127,5 @@ class DetOptions(object):
 
             log_path = os.path.join('runs', self.opt.exp_name)
             print('log path: ',log_path)
-            if not os.path.exists(log_path):
-                os.mkdir(log_path)
+            # if not os.path.exists(log_path):
+            #     os.mkdir(log_path)
