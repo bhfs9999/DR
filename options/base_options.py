@@ -32,6 +32,15 @@ class DetOptions(object):
         self.parser.add_argument('--eval_path', default='/home/xav/project/DR/data/3/test.csv', type=str, help='test fname')
         self.parser.add_argument('--loss', default='MultiBoxLoss', choices=['MultiBoxLoss', 'CenterLoss'], type=str, help='choose loss')
 
+        # train by iter
+        self.parser.add_argument('--train_by_iter', default=False, type=str2bool, help='Whether to train by iter')
+        self.parser.add_argument('--max_iter', default=100000, type=int, help='Number of training iterations')
+        self.parser.add_argument('--stepvalues_iter', default=[25000, 50000, 75000], type=list, help='# of iter to change lr')
+        self.parser.add_argument('--val_interval', default=100, type=int, help='every # train iter to val')
+        self.parser.add_argument('--val_iterlen', default=20, type=int, help='how many iter to val')
+        self.parser.add_argument('--save_freq_iter', default=5000 , type=int, help='how many iter to val')
+
+
         # train opt
         self.parser.add_argument('--max_epochs', default=40, type=int, help='Number of training iterations')
         self.parser.add_argument('--version', default='single_feature', help='conv11_2(v2) or pool6(v1) as last layer')

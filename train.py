@@ -50,18 +50,22 @@ if __name__ == '__main__':
     if args.debug:
         args.max_epochs = 1
 
-    for i in range(begin_epoch, begin_epoch+args.max_epochs):
-        print('\nepoch: {}'.format(i))
-        model.train(dataloader_train, i, writer)
+    if args.train_by_iter:
+        model.train_val_byIter(dataset_train, dataloader_train, dataset_val, dataloader_val, writer)
 
-        if args.debug:
-            break
-        if not args.voc:
-            model.val(dataloader_val, i, writer)
+    else:
+        for i in range(begin_epoch, begin_epoch+args.max_epochs):
+            print('\nepoch: {}'.format(i))
+            model.train(dataloader_train, i, writer)
 
-        if (i+1) % args.save_freq == 0:
-            model.save_network(model.net, 'single_feature', epoch=i+1, )
-            print('saving in epoch {}'.format(i))
+            if args.debug:
+                break
+            if not args.voc:
+                model.val(dataloader_val, i, writer)
+
+            if (i+1) % args.save_freq == 0:
+                model.save_network(model.net, 'single_feature', epoch=i+1, )
+                print('saving in epoch {}'.format(i))
 
     # writer.eport_scalars_to_json("./all_scalars.json")
     writer.close()

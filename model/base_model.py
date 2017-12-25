@@ -72,6 +72,16 @@ class BaseModel(object):
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.lr_current
 
+    def _adjust_learning_rate_iter(self, iter):
+        """Sets the learning rate to the initial LR decayed by 10 at every specified step
+        # Adapted from PyTorch Imagenet example:
+        # https://github.com/pytorch/examples/blob/master/imagenet/main.py
+        """
+        if iter in self.args.stepvalues_iter:
+            self.lr_current = self.lr_current * self.args.gamma
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = self.lr_current
+
 class DetModel(BaseModel):
     def __init__(self, args,):
         self.args       = args
@@ -80,6 +90,7 @@ class DetModel(BaseModel):
         self.cuda       = args.cuda
         self.net        = eval(self.model_name+'(args)')
         self.lr_current = self.args.lr
+        self.batch_size = args.batch_size
         self.optimizer  = optim.SGD(self.net.parameters(), lr=args.lr,
                                     momentum=args.momentum, weight_decay=args.weight_decay)
         # TODO: more general
@@ -108,11 +119,130 @@ class DetModel(BaseModel):
             cudnn.benchmark = True
         return epoch
 
-    def test(self, x):
-        assert self.phase == 'test', "Command arg phase should be 'test'. "
-        self.net.val()
-        out = self.net(x, self.args)
-        return out
+    def train_val_byIter(self, train_dataset, train_dloader, val_dataset, val_dloader, writer):
+        train_epoch_size = len(train_dataset) // self.batch_size
+        val_epoch_size = len(val_dataset) // self.batch_size
+        train_batch_iterator = None
+        val_batch_iterator = None
+        val_iter = 0
+        for iteration in range(self.args.start_iter, self.args.max_iter):
+            t2 = time.time()
+            if (not train_batch_iterator) or (iteration % train_epoch_size == 0):
+                train_batch_iterator = iter(train_dloader)
+            self._adjust_learning_rate_iter(iteration)
+
+            images, targets = next(train_batch_iterator)
+
+            if self.cuda:
+                images  = Variable(images.cuda())
+                targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
+            else:
+                images  = Variable(images)
+                targets = [Variable(anno, volatile=True) for anno in targets]
+
+            out = self.net(images)
+
+            # backprop
+            self.optimizer.zero_grad()
+            if self.args.loss == 'CenterLoss':
+                loss_l, loss_c, target_fmap, have_centerloss = self.criterion(out, targets)
+                center_loss, self.net._buffers['centers'] = self.criterion.get_center_loss(self.net._buffers['centers'],
+                                                                                           self.net.center_feature,
+                                                                                           target_fmap,
+                                                                                           self.args.alpha,
+                                                                                           self.args.num_classes,
+                                                                                           have_centerloss,
+                                                                                           )
+
+                loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
+                loss.backward()
+                self.optimizer.step()
+                if self.iter % 10 == 0:
+                    print('train loss: {:.4f} | n_iter: {} | time: {:.2f}'.format(loss.data[0], self.iter, time.time() - t2))
+                    scalars = [loss.data[0], loss_c.data[0], loss_l.data[0], center_loss.data[0]]
+                    names   = ['loss', 'loss_c', 'loss_l', 'center_loss']
+                    write_scalars(writer, scalars, names, self.iter, tag='train_loss')
+                if self.iter % self.args.val_interval == 0:
+                    val_batch_iterator, val_iter = self.val_iter(val_batch_iterator, val_iter, val_dloader, val_epoch_size, writer, iteration)
+
+
+            else:
+                loss_l, loss_c, = self.criterion(out, targets)
+                loss = loss_c + loss_l
+
+                loss.backward()
+                self.optimizer.step()
+
+                # log
+                if self.iter % 10 == 0:
+                    print('train loss: {:.4f} | n_iter: {} | time: {:.2f}'.format(loss.data[0], self.iter, time.time() - t2))
+                    scalars = [loss.data[0], loss_c.data[0], loss_l.data[0], ]
+                    names   = ['loss', 'loss_c', 'loss_l', ]
+                    write_scalars(writer, scalars, names, self.iter, tag='train_loss')
+                if self.iter % self.args.val_interval == 0:
+                    val_batch_iterator, val_iter = self.val_iter(val_batch_iterator, val_iter, val_dloader, val_epoch_size, writer, iteration)
+
+            self.iter = iteration
+
+            if (self.iter+1) % self.args.save_freq_iter == 0:
+                self.save_network(self.net, 'single_feature', epoch=self.iter+1, )
+                print('saving in iter {}'.format(self.iter))
+
+    def val_iter(self, val_batch_iterator, val_iter, val_dloader, val_epoch_size, writer, train_iter):
+        self.net.eval()
+        losses   = []
+        losses_c = []
+        losses_l = []
+        losses_center = []
+        t1 = time.time()
+        for iteration in range(val_iter, val_iter+self.args.val_iterlen):
+
+            if (not val_batch_iterator) or (iteration % val_epoch_size == 0):
+                val_batch_iterator = iter(val_dloader)
+
+            images, targets = next(val_batch_iterator)
+
+            if self.cuda:
+                images  = Variable(images.cuda())
+                targets = [Variable(anno.cuda(), volatile=True) for anno in targets]
+            else:
+                images  = Variable(images)
+                targets = [Variable(anno, volatile=True) for anno in targets]
+
+            out = self.net(images)
+            if self.args.loss == 'CenterLoss':
+                loss_l, loss_c, target_fmap, have_centerloss = self.criterion(out, targets)
+                center_loss, self.net._buffers['centers'] = self.criterion.get_center_loss(self.net._buffers['centers'],
+                                                                                           self.net.center_feature,
+                                                                                           target_fmap,
+                                                                                           self.args.alpha,
+                                                                                           self.args.num_classes,
+                                                                                           have_centerloss
+                                                                                           )
+                loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
+                center_loss_s = center_loss.data[0]
+            else:
+                loss_l, loss_c, = self.criterion(out, targets)
+                loss = loss_c + loss_l
+                center_loss_s = 0
+
+            losses.append(loss.data[0])
+            losses_c.append(loss_c.data[0])
+            losses_l.append(loss_l.data[0])
+            losses_center.append(center_loss_s)
+
+        # log
+        n = len(losses)
+        loss, loss_l, loss_c, loss_center = sum(losses) / n, sum(losses_l) / n, \
+                                            sum(losses_c) / n, sum(losses_center) / n
+        scalars = [loss, loss_c, loss_l, loss_center]
+        names   = ['loss', 'loss_c', 'loss_l', 'loss_center']
+        write_scalars(writer, scalars, names, train_iter, tag='val_loss')
+        print('iter{} val finish, cost time {:.2f}, loss: {:.4f}, loss_l: {:.4f}, loss_c: {:.4f}, loss_center: {:.4f}'.format(train_iter,
+                                                                                                                               time.time()-t1, loss, loss_l, loss_c, loss_center))
+        self.net.train()
+        return val_batch_iterator, val_iter+self.args.val_iterlen
+
 
     def train(self, dataloader, epoch, writer):
         self.net.train()
