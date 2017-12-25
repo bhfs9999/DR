@@ -82,7 +82,7 @@ class DetOptions(object):
                                  help='File path to save results')
 
         # center loss
-        self.parser.add_argument('--alpha', default=1, type=float, help='center loss hp alpha')
+        self.parser.add_argument('--alpha', default=0.5, type=float, help='center loss hp alpha')
         self.parser.add_argument('--centerloss_weight', default=0.1, type=float, help='center loss hp weight')
         self.parser.add_argument('--center_dim', default=128, type=int, help='center loss hp center dim')
         self.parser.add_argument('--only_pos_centerloss', default=False, type=str2bool, help='Whether only use pos to center loss')
