@@ -355,14 +355,16 @@ class DetModel(BaseModel):
 
 
                 loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
+                center_loss = center_loss.data[0]
             else:
                 loss_l, loss_c, = self.criterion(out, targets)
                 loss = loss_c + loss_l
+                center_loss = 0
 
             losses.append(loss.data[0])
             losses_c.append(loss_c.data[0])
             losses_l.append(loss_l.data[0])
-            losses_center.append(center_loss.data[0])
+            losses_center.append(center_loss)
 
         # log
         n = len(losses)
