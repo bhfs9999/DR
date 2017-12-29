@@ -153,8 +153,10 @@ class DetModel(BaseModel):
                                                                                            self.args.num_classes,
                                                                                            have_centerloss,
                                                                                            )
-
-                loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
+                if self.args.only_centerloss:
+                    loss = center_loss
+                else:
+                    loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
                 loss.backward()
                 self.optimizer.step()
                 if self.iter % 10 == 0:
@@ -219,7 +221,10 @@ class DetModel(BaseModel):
                                                                                            self.args.num_classes,
                                                                                            have_centerloss
                                                                                            )
-                loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
+                if self.args.only_centerloss == True:
+                    loss = center_loss
+                else:
+                    loss = loss_c + loss_l + self.args.centerloss_weight * center_loss
                 center_loss_s = center_loss.data[0]
             else:
                 loss_l, loss_c, = self.criterion(out, targets)
