@@ -34,7 +34,7 @@ if __name__ == '__main__':
         val_fnames   = list(set(val_fnames).intersection(set(all_xml)))
 
         dataset_train = DetectionDataset(args.img_root, args.xml_root, train_fnames, args.crop_size, args.shift_rate,
-                                         args.pad_value, BaseTransform(args.input_size, args.means), )#SSDAugmentation(args.input_size, args.means))
+                                         args.pad_value, SSDAugmentation(args.input_size, args.means), )#SSDAugmentation(args.input_size, args.means))  BaseTransform
         dataloader_train = data.DataLoader(dataset_train, args.batch_size, num_workers=args.num_workers,
                                       shuffle=True, collate_fn=detection_collate, pin_memory=True)
         dataset_val = DetectionDataset(args.img_root, args.xml_root, val_fnames, args.crop_size, args.shift_rate,
