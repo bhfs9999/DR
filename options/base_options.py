@@ -24,12 +24,12 @@ class DetOptions(object):
         self.parser.add_argument('--cuda', default=True, type=str2bool, help='Use cuda to train model')
         self.parser.add_argument('--save_folder', default='weights/', help='Location to save checkpoint models')
         self.parser.add_argument('--log_params', default=False, type=str2bool, help='Whether to log params')
-        self.parser.add_argument('--img_root', default='../data/3/images', type=str, help='img root')
-        self.parser.add_argument('--xml_root', default='../data/newxml', type=str, help='xml_root')
+        self.parser.add_argument('--img_root', default='/data/grq/DR/dectection/3/images', type=str, help='img root')
+        self.parser.add_argument('--xml_root', default='/data/grq/DR/dectection/newxml', type=str, help='xml_root')
         self.parser.add_argument('--debug', default=False, type=str2bool, help='Whether to debug')
-        self.parser.add_argument('--train_path', default='/home/xav/project/DR/data/3/train.csv', type=str, help='train fname')
-        self.parser.add_argument('--val_path', default='/home/xav/project/DR/data/3/val.csv', type=str, help='val fname')
-        self.parser.add_argument('--eval_path', default='/home/xav/project/DR/data/3/test.csv', type=str, help='test fname')
+        self.parser.add_argument('--train_path', default='/data/grq/DR/dectection/3/train.csv', type=str, help='train fname')
+        self.parser.add_argument('--val_path', default='/data/grq/DR/dectection/3/val.csv', type=str, help='val fname')
+        self.parser.add_argument('--eval_path', default='/data/grq/DR/dectection/3/test.csv', type=str, help='test fname')
         self.parser.add_argument('--loss', default='MultiBoxLoss', choices=['MultiBoxLoss', 'CenterLoss'], type=str, help='choose loss')
 
         # train by iter

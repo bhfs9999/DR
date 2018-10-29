@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-CUDA_VISIBLE_DEVICES=6
+#!/usr/bin/zsh
+CUDA_VISIBLE_DEVICES=0
 python eval.py \
 test \
 aug_centerloss \

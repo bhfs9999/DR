@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-export CUDA_VISIBLE_DEVICES=3
+export CUDA_VISIBLE_DEVICES=1
 python3 train.py \
 train \
 aug_centerloss \

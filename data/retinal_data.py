@@ -11,8 +11,8 @@ else:
     import xml.etree.ElementTree as ET
 
 dname2label = {
-    '微血管瘤':0,
-    '出血斑':1,
+    '微血管瘤':0, #MA
+    '出血斑':1, #HE
 }
 
 class DetectionDataset(data.Dataset):
@@ -204,11 +204,3 @@ def pil_loader(path):
     with open(path, 'rb') as f:
         with Image.open(f) as img:
             return img.convert('RGB')
-
-
-
-
-
-
-
-

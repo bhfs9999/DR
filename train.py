@@ -29,7 +29,7 @@ if __name__ == '__main__':
     else:
         train_fnames = [idx.split('.')[0]+'_label.xml' for idx in read_fname(args.train_path)]
         val_fnames   = [idx.split('.')[0]+'_label.xml' for idx in read_fname(args.val_path)]
-        all_xml      = os.listdir('/home/xav/project/DR/data/newxml/')
+        all_xml      = os.listdir('/data/grq/DR/dectection/newxml/')
         train_fnames = list(set(train_fnames).intersection(set(all_xml)))
         val_fnames   = list(set(val_fnames).intersection(set(all_xml)))
 

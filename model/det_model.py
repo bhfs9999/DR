@@ -84,9 +84,9 @@ class VggStride16_centerloss(VggStride16):
 
         return output
 
-def vgg(cfg, i, batch_norm=False):
+def vgg(cfg, in_channels, batch_norm=False):
+    # TODO use resnet?
     layers = []
-    in_channels = i
     for v in cfg:
         if v == 'M':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
