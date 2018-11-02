@@ -86,7 +86,7 @@ class DetOptions(object):
         self.parser.add_argument('--centerloss_weight', default=0.1, type=float, help='center loss hp weight')
         self.parser.add_argument('--center_dim', default=128, type=int, help='center loss hp center dim')
         self.parser.add_argument('--only_pos_centerloss', default=False, type=str2bool, help='Whether only use pos to center loss')
-        self.parser.add_argument('--only_centerloss', default=False, type=str2bool, help='Whether only use pos to center loss')
+        self.parser.add_argument('--only_centerloss', default=False, type=str2bool, help='Whether only use center loss without loc loss and cls loss')
 
     def parse(self):
         if not self.initialized:

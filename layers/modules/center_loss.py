@@ -59,7 +59,7 @@ class CenterLoss(nn.Module):
                 shape: [batch_size,num_objs,5] (last idx is the label).
         """
         loc_data, conf_data, priors = predictions
-        num = loc_data.size(0)
+        num = loc_data.size(0)      # batch size
         priors = priors[:loc_data.size(1), :]
         num_priors = (priors.size(0))
         # print('priors size', priors.size())       # 4332 4
@@ -70,9 +70,11 @@ class CenterLoss(nn.Module):
         loc_t = torch.Tensor(num, num_priors, 4)
         conf_t = torch.LongTensor(num, num_priors)
         for idx in range(num):
-            truths = targets[idx][:, :-1].data
-            labels = targets[idx][:, -1].data
+            truths = targets[idx][:, :-1].data  # gt loc
+            labels = targets[idx][:, -1].data   # gt label
             defaults = priors.data
+            # get loc_t: the offset to be learnt
+            #    conf_t: the label to be learnt
             match(self.threshold, truths, defaults, self.variance, labels,
                   loc_t, conf_t, idx)
         if self.use_gpu:
@@ -117,6 +119,7 @@ class CenterLoss(nn.Module):
         targets_weighted = conf_t[(pos + neg).gt(0)]
         # print('pos neg gt0 size', (pos+neg).gt(0).size(), (pos+neg).gt(0))   # bs x (19 x 19 x 9)
         n_anchos = len(vggstride16_config['scales']) * (len(vggstride16_config['aspect_ratios'][0] * 2) + 1)
+        # determine whether only pos sample have center loss or both pos and neg
         if self.only_pos_centerloss:
             have_centerloss = torch.max((pos).gt(0).view(conf_t.size(0), 19, 19, n_anchos), dim=3)[0].view(-1)
         else:
@@ -166,11 +169,11 @@ class CenterLoss(nn.Module):
         batch_size = target.size(0)
         features_dim = features.size(1)
 
-        target_expand = target.view(batch_size,1).expand(batch_size,features_dim)
+        target_expand = target.view(batch_size, 1).expand(batch_size, features_dim)
         centers_var = Variable(centers)
-        centers_batch = centers_var.gather(0,target_expand)
+        centers_batch = centers_var.gather(0, target_expand)
         criterion = nn.MSELoss()
-        center_loss = criterion(features,  centers_batch)
+        center_loss = criterion(features, centers_batch)
 
         diff = centers_batch - features
         unique_label, unique_reverse, unique_count = np.unique(target.cpu().data.numpy(), return_inverse=True, return_counts=True)
